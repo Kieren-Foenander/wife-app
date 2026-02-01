@@ -30,10 +30,13 @@ test.describe('Daily view smoke', () => {
 
   test('category and task forms are present', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByPlaceholder(/laundry, groceries/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Create' })).toBeVisible()
-    await expect(page.getByPlaceholder(/pay rent/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add task' })).toBeVisible()
+    await page.getByRole('button', { name: 'Create' }).click()
+    const drawer = page.getByRole('dialog', { name: /create category or task/i })
+    await expect(drawer).toBeVisible()
+    await expect(drawer.getByPlaceholder(/laundry, groceries/i)).toBeVisible()
+    await expect(drawer.getByRole('button', { name: 'Create category' })).toBeVisible()
+    await expect(drawer.getByPlaceholder(/pay rent/i)).toBeVisible()
+    await expect(drawer.getByRole('button', { name: 'Add task' })).toBeVisible()
   })
 
   test('sections for categories and tasks exist', async ({ page }) => {
@@ -46,8 +49,11 @@ test.describe('Daily view smoke', () => {
     test.setTimeout(60_000)
     const taskTitle = `Pay bills ${Date.now()}`
     await page.goto('/')
-    await page.getByPlaceholder(/pay rent/i).fill(taskTitle)
-    await page.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Create' }).click()
+    const drawer = page.getByRole('dialog', { name: /create category or task/i })
+    await expect(drawer).toBeVisible()
+    await drawer.getByPlaceholder(/pay rent/i).fill(taskTitle)
+    await drawer.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
 
     const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
@@ -67,9 +73,10 @@ test.describe('Daily view smoke', () => {
     const taskTwo = `Review notes ${Date.now()}`
 
     await page.goto('/')
-    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
-    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
+    const rootDrawer = page.getByRole('dialog', { name: /create category or task/i })
+    await rootDrawer.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await rootDrawer.getByRole('button', { name: 'Create category' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
     await expect(categoryLink).toBeVisible({ timeout: 45000 })
     await categoryLink.click()
@@ -78,13 +85,14 @@ test.describe('Daily view smoke', () => {
       page.getByRole('heading', { name: categoryName }),
     ).toBeVisible({ timeout: 45000 })
 
-    const childTaskForm = page
-      .getByRole('heading', { name: /add a child task/i })
-      .locator('..')
-    await childTaskForm.getByPlaceholder(/vacuum, wipe counters/i).fill(taskOne)
-    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
-    await childTaskForm.getByPlaceholder(/vacuum, wipe counters/i).fill(taskTwo)
-    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    let categoryDrawer = page.getByRole('dialog', { name: /add child category or task/i })
+    await categoryDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
+    await categoryDrawer.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    categoryDrawer = page.getByRole('dialog', { name: /add child category or task/i })
+    await categoryDrawer.getByPlaceholder(/pay rent/i).fill(taskTwo)
+    await categoryDrawer.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByText(taskOne)).toBeVisible()
     await expect(page.getByText(taskTwo)).toBeVisible()
 
@@ -121,8 +129,10 @@ test.describe('Daily view smoke', () => {
     const taskB = `Task B ${Date.now()}`
 
     await page.goto('/')
-    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await page.getByRole('button', { name: 'Create' }).click()
+    const rootDrawer = page.getByRole('dialog', { name: /create category or task/i })
+    await rootDrawer.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await rootDrawer.getByRole('button', { name: 'Create category' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
     await expect(categoryLink).toBeVisible({ timeout: 45000 })
     await categoryLink.click()
@@ -131,17 +141,14 @@ test.describe('Daily view smoke', () => {
       page.getByRole('heading', { name: categoryName }),
     ).toBeVisible({ timeout: 45000 })
 
-    const childTaskForm = page
-      .getByRole('heading', { name: /add a child task/i })
-      .locator('..')
-    await childTaskForm
-      .getByPlaceholder(/vacuum, wipe counters/i)
-      .fill(taskA)
-    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
-    await childTaskForm
-      .getByPlaceholder(/vacuum, wipe counters/i)
-      .fill(taskB)
-    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    let categoryDrawer = page.getByRole('dialog', { name: /add child category or task/i })
+    await categoryDrawer.getByPlaceholder(/pay rent/i).fill(taskA)
+    await categoryDrawer.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    categoryDrawer = page.getByRole('dialog', { name: /add child category or task/i })
+    await categoryDrawer.getByPlaceholder(/pay rent/i).fill(taskB)
+    await categoryDrawer.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByText(taskA)).toBeVisible()
     await expect(page.getByText(taskB)).toBeVisible()
 
@@ -162,9 +169,10 @@ test.describe('Daily view smoke', () => {
     const childCategoryName = `Laundry ${Date.now()}`
     const childTaskTitle = `Vacuum ${Date.now()}`
     await page.goto('/')
-    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
-    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
+    const rootDrawer = page.getByRole('dialog', { name: /create category or task/i })
+    await rootDrawer.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await rootDrawer.getByRole('button', { name: 'Create category' }).click()
     const categoryNavLink = page.getByRole('link', { name: categoryName })
     await expect(categoryNavLink).toBeVisible({ timeout: 45000 })
     await categoryNavLink.click()
@@ -183,24 +191,17 @@ test.describe('Daily view smoke', () => {
       page.getByRole('heading', { name: /child tasks/i }),
     ).toBeVisible()
 
-    const childCategoryForm = page
-      .getByRole('heading', { name: /add a child category/i })
-      .locator('..')
-    await childCategoryForm
-      .getByPlaceholder(/cleaning, errands/i)
-      .fill(childCategoryName)
-    await childCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    const categoryDrawer = page.getByRole('dialog', { name: /add child category or task/i })
+    await categoryDrawer.getByPlaceholder(/laundry, groceries/i).fill(childCategoryName)
+    await categoryDrawer.getByRole('button', { name: 'Create category' }).click()
     await expect(
       page.getByRole('link', { name: childCategoryName }),
     ).toBeVisible()
 
-    const childTaskForm = page
-      .getByRole('heading', { name: /add a child task/i })
-      .locator('..')
-    await childTaskForm
-      .getByPlaceholder(/vacuum, wipe counters/i)
-      .fill(childTaskTitle)
-    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    await page.getByRole('dialog', { name: /add child category or task/i }).getByPlaceholder(/pay rent/i).fill(childTaskTitle)
+    await page.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByText(childTaskTitle)).toBeVisible()
   })
 
@@ -210,9 +211,10 @@ test.describe('Daily view smoke', () => {
     const grandchildCategoryName = `Pantry ${Date.now()}`
 
     await page.goto('/')
-    await page.getByPlaceholder(/laundry, groceries/i).fill(rootCategoryName)
-    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
+    const rootDrawer = page.getByRole('dialog', { name: /create category or task/i })
+    await rootDrawer.getByPlaceholder(/laundry, groceries/i).fill(rootCategoryName)
+    await rootDrawer.getByRole('button', { name: 'Create category' }).click()
     const rootCategoryNavLink = page.getByRole('link', {
       name: rootCategoryName,
     })
@@ -223,13 +225,10 @@ test.describe('Daily view smoke', () => {
       page.getByRole('heading', { name: rootCategoryName }),
     ).toBeVisible({ timeout: 45000 })
 
-    const childCategoryForm = page
-      .getByRole('heading', { name: /add a child category/i })
-      .locator('..')
-    await childCategoryForm
-      .getByPlaceholder(/cleaning, errands/i)
-      .fill(childCategoryName)
-    await childCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    const drawer1 = page.getByRole('dialog', { name: /add child category or task/i })
+    await drawer1.getByPlaceholder(/laundry, groceries/i).fill(childCategoryName)
+    await drawer1.getByRole('button', { name: 'Create category' }).click()
     const childCategoryNavLink = page.getByRole('link', {
       name: childCategoryName,
     })
@@ -240,13 +239,10 @@ test.describe('Daily view smoke', () => {
       page.getByRole('heading', { name: childCategoryName }),
     ).toBeVisible()
 
-    const grandchildCategoryForm = page
-      .getByRole('heading', { name: /add a child category/i })
-      .locator('..')
-    await grandchildCategoryForm
-      .getByPlaceholder(/cleaning, errands/i)
-      .fill(grandchildCategoryName)
-    await grandchildCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await page.getByRole('button', { name: 'Add category or task' }).click()
+    const drawer2 = page.getByRole('dialog', { name: /add child category or task/i })
+    await drawer2.getByPlaceholder(/laundry, groceries/i).fill(grandchildCategoryName)
+    await drawer2.getByRole('button', { name: 'Create category' }).click()
     const grandchildCategoryNavLink = page.getByRole('link', {
       name: grandchildCategoryName,
     })

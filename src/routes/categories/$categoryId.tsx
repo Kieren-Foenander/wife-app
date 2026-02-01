@@ -3,6 +3,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
+import { CreationDrawer } from '../../components/CreationDrawer'
 import { Button } from '../../components/ui/button'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -52,42 +53,27 @@ function CategoryDetail() {
   const createTask = useMutation(api.todos.createTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const bulkCompleteCategory = useMutation(api.todos.bulkCompleteCategory)
-  const [childCategoryName, setChildCategoryName] = useState('')
-  const [childTaskTitle, setChildTaskTitle] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [isBulkCompleting, setIsBulkCompleting] = useState(false)
   const hasDescendantTasks = Boolean(effectiveCompletion?.total)
   const hasIncompleteDescendants = effectiveCompletion
     ? effectiveCompletion.completed < effectiveCompletion.total
     : false
 
-  const handleChildCategorySubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault()
-    const trimmed = childCategoryName.trim()
-    if (!trimmed) {
-      return
-    }
+  const handleAddCategory = async (name: string) => {
     await createCategory({
-      name: trimmed,
+      name,
       parentCategoryId: categoryId as Id<'categories'>,
     })
-    setChildCategoryName('')
+    setDrawerOpen(false)
   }
 
-  const handleChildTaskSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault()
-    const trimmed = childTaskTitle.trim()
-    if (!trimmed) {
-      return
-    }
+  const handleAddTask = async (title: string) => {
     await createTask({
-      title: trimmed,
+      title,
       parentCategoryId: categoryId as Id<'categories'>,
     })
-    setChildTaskTitle('')
+    setDrawerOpen(false)
   }
 
   const handleTaskToggle = async (
@@ -188,65 +174,22 @@ function CategoryDetail() {
           )}
         </header>
 
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">
-            Add a child category
-          </h2>
-          <form
-            onSubmit={handleChildCategorySubmit}
-            className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setDrawerOpen(true)}
           >
-            <label className="mb-3 block text-sm font-medium text-slate-300">
-              Subcategory name
-            </label>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={childCategoryName}
-                onChange={(event) => setChildCategoryName(event.target.value)}
-                placeholder="Cleaning, Errands"
-                className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-              />
-              <Button
-                type="submit"
-                className="h-10 px-6"
-                disabled={!childCategoryName.trim()}
-              >
-                Create
-              </Button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">
-            Add a child task
-          </h2>
-          <form
-            onSubmit={handleChildTaskSubmit}
-            className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
-          >
-            <label className="mb-3 block text-sm font-medium text-slate-300">
-              Task title
-            </label>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={childTaskTitle}
-                onChange={(event) => setChildTaskTitle(event.target.value)}
-                placeholder="Vacuum, Wipe counters"
-                className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-              />
-              <Button
-                type="submit"
-                className="h-10 px-6"
-                disabled={!childTaskTitle.trim()}
-              >
-                Add task
-              </Button>
-            </div>
-          </form>
-        </section>
+            Add category or task
+          </Button>
+          <CreationDrawer
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            parentCategoryId={categoryId as Id<'categories'>}
+            onAddCategory={handleAddCategory}
+            onAddTask={handleAddTask}
+            title="Add child category or task"
+          />
+        </div>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-slate-100">

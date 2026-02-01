@@ -67,7 +67,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 
 ## Phase 6: Creation drawer UX
 
-- [ ] Drawer component: Slide-up panel for creating task/category
+- [x] Drawer component: Slide-up panel for creating task/category
 - [ ] Mode toggle: New Task vs New Category in drawer
 - [ ] Task fields: Title, Parent, Repeat toggle, Frequency select
 - [ ] Category fields: Name, Parent, Color

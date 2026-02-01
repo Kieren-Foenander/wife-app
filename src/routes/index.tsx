@@ -3,6 +3,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
+import { CreationDrawer } from '../components/CreationDrawer'
 import { Button } from '../components/ui/button'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -169,8 +170,7 @@ export const Route = createFileRoute('/')({
 function DailyView() {
   const { view } = Route.useSearch()
   const navigate = useNavigate({ from: '/' })
-  const [name, setName] = useState('')
-  const [taskTitle, setTaskTitle] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
@@ -203,26 +203,14 @@ function DailyView() {
         ? rootTasksDueInMonth
         : rootTasksDueToday
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) {
-      return
-    }
-    await createCategory({ name: trimmed })
-    setName('')
+  const handleAddCategory = async (name: string) => {
+    await createCategory({ name })
+    setDrawerOpen(false)
   }
 
-  const handleTaskSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault()
-    const trimmed = taskTitle.trim()
-    if (!trimmed) {
-      return
-    }
-    await createTask({ title: trimmed })
-    setTaskTitle('')
+  const handleAddTask = async (title: string) => {
+    await createTask({ title })
+    setDrawerOpen(false)
   }
 
   const startEditing = (id: Id<'categories'>, currentName: string) => {
@@ -362,55 +350,21 @@ function DailyView() {
           <MonthGrid />
         ) : null}
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
-        >
-          <label className="mb-3 block text-sm font-medium text-slate-300">
-            Category name
-          </label>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Laundry, Groceries, Health"
-              className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-            />
-            <Button
-              type="submit"
-              className="h-10 px-6"
-              disabled={!name.trim()}
-            >
-              Create
-            </Button>
-          </div>
-        </form>
-
-        <form
-          onSubmit={handleTaskSubmit}
-          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
-        >
-          <label className="mb-3 block text-sm font-medium text-slate-300">
-            Task title
-          </label>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={taskTitle}
-              onChange={(event) => setTaskTitle(event.target.value)}
-              placeholder="Pay rent, Call mom"
-              className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-            />
-            <Button
-              type="submit"
-              className="h-10 px-6"
-              disabled={!taskTitle.trim()}
-            >
-              Add task
-            </Button>
-          </div>
-        </form>
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setDrawerOpen(true)}
+          >
+            Create
+          </Button>
+          <CreationDrawer
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            onAddCategory={handleAddCategory}
+            onAddTask={handleAddTask}
+            title="Create category or task"
+          />
+        </div>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-slate-100">
