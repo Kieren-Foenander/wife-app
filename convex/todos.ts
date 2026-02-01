@@ -407,7 +407,65 @@ export const updateTask = mutation({
 export const deleteTask = mutation({
   args: { id: v.id('tasks') },
   handler: async (ctx, args) => {
+    const child = await ctx.db
+      .query('tasks')
+      .withIndex('byParentTaskId', (q) => q.eq('parentTaskId', args.id))
+      .first()
+    if (child) {
+      throw new Error('Task has sub-tasks; delete them first')
+    }
+    const completed = await ctx.db
+      .query('completedTasks')
+      .withIndex('by_task_id', (q) => q.eq('taskId', args.id))
+      .collect()
+    for (const row of completed) {
+      await ctx.db.delete(row._id)
+    }
     return await ctx.db.delete(args.id)
+  },
+})
+
+export const hasCompletedTasks = query({
+  args: { taskId: v.id('tasks') },
+  handler: async (ctx, args) => {
+    const latest = await ctx.db
+      .query('completedTasks')
+      .withIndex('by_task_id_completed_date', (q) =>
+        q.eq('taskId', args.taskId),
+      )
+      .order('desc')
+      .first()
+    return latest != null
+  },
+})
+
+export const completeTaskAndSubtasks = mutation({
+  args: { taskId: v.id('tasks') },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const queue: Id<'tasks'>[] = [args.taskId]
+    const allTaskIds: Id<'tasks'>[] = []
+    while (queue.length > 0) {
+      const currentId = queue.shift()
+      if (!currentId) continue
+      allTaskIds.push(currentId)
+      const children = await ctx.db
+        .query('tasks')
+        .withIndex('byParentTaskId', (q) =>
+          q.eq('parentTaskId', currentId),
+        )
+        .collect()
+      for (const child of children) {
+        queue.push(child._id)
+      }
+    }
+    for (const taskId of allTaskIds) {
+      await ctx.db.insert('completedTasks', {
+        taskId,
+        completedDate: now,
+      })
+    }
+    return { inserted: allTaskIds.length }
   },
 })
 

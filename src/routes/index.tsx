@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { ClipboardList, Folder, FolderOpen, ListTodo } from 'lucide-react'
+import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../components/CreationDrawer'
 import { Button } from '../components/ui/button'
 import { ListRowSkeleton } from '../components/ui/skeleton'
@@ -236,6 +235,114 @@ function MonthGrid({
   )
 }
 
+function TaskRow({
+  task,
+  editingTaskId,
+  draftTitle,
+  setDraftTitle,
+  celebratingTaskId,
+  startEditing,
+  saveEditing,
+  cancelEditing,
+  handleDelete,
+  handleComplete,
+}: {
+  task: { _id: Id<'tasks'>; title: string }
+  editingTaskId: Id<'tasks'> | null
+  draftTitle: string
+  setDraftTitle: (value: string) => void
+  celebratingTaskId: Id<'tasks'> | null
+  startEditing: (id: Id<'tasks'>, currentTitle: string) => void
+  saveEditing: (id: Id<'tasks'>, currentTitle: string) => void
+  cancelEditing: (id: Id<'tasks'>) => void
+  handleDelete: (id: Id<'tasks'>) => void
+  handleComplete: (id: Id<'tasks'>, currentCompleted: boolean) => void
+}) {
+  const isCompleted =
+    useQuery(api.todos.hasCompletedTasks, { taskId: task._id }) ?? false
+
+  return (
+    <li
+      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
+        celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
+      }`}
+    >
+      {editingTaskId === task._id ? (
+        <>
+          <input
+            type="text"
+            value={draftTitle}
+            onChange={(event) => setDraftTitle(event.target.value)}
+            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+            aria-label="Rename task"
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              className="h-9 px-4"
+              disabled={!draftTitle.trim() || draftTitle.trim() === task.title}
+              onClick={() => saveEditing(task._id, task.title)}
+              aria-label="Save task title"
+            >
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-9 px-4"
+              onClick={() => cancelEditing(task._id)}
+              aria-label="Cancel renaming task"
+            >
+              Cancel
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
+          <label className="flex flex-1 items-center gap-3">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+              checked={isCompleted}
+              onChange={() => handleComplete(task._id, isCompleted)}
+              aria-label={`Mark ${task.title} complete`}
+            />
+            <a
+              href={`/tasks/${task._id}`}
+              className={`flex-1 truncate text-left ${
+                isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
+              }`}
+            >
+              {task.title}
+            </a>
+          </label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-9 px-4"
+              onClick={() => startEditing(task._id, task.title)}
+              aria-label={`Rename task ${task.title}`}
+            >
+              Rename
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="h-9 px-4"
+              onClick={() => handleDelete(task._id)}
+              aria-label={`Delete task ${task.title}`}
+            >
+              Delete
+            </Button>
+          </div>
+        </>
+      )}
+    </li>
+  )
+}
+
 export const Route = createFileRoute('/')({
   ssr: false,
   validateSearch: (search: Record<string, unknown>): {
@@ -267,22 +374,16 @@ function DailyView() {
     [selectedDate],
   )
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
-  const [draftNames, setDraftNames] = useState<Record<string, string>>({})
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
   const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
     {},
   )
   const [celebratingTaskId, setCelebratingTaskId] =
     useState<Id<'tasks'> | null>(null)
-  const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
-  const updateCategory = useMutation(api.todos.updateCategory)
   const updateTask = useMutation(api.todos.updateTask)
-  const deleteCategory = useMutation(api.todos.deleteCategory)
   const deleteTask = useMutation(api.todos.deleteTask)
-  const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
-  const categories = useQuery(api.todos.listCategories)
+  const completeTaskAndSubtasks = useMutation(api.todos.completeTaskAndSubtasks)
   const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
     dayStartMs,
   })
@@ -299,90 +400,31 @@ function DailyView() {
         ? rootTasksDueInMonth
         : rootTasksDueOnDate
 
-  const handleAddCategory = async (params: {
-    name: string
-    parentCategoryId?: Id<'categories'>
-    color?: string
-  }) => {
-    try {
-      await createCategory({
-        name: params.name,
-        parentCategoryId: params.parentCategoryId,
-        color: params.color,
-      })
-      setDrawerOpen(false)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create category.',
-      )
-    }
-  }
-
   const handleAddTask = async (params: {
     title: string
-    parentCategoryId?: Id<'categories'>
+    parentTaskId?: Id<'tasks'>
     dueDate?: number
-    repeatEnabled?: boolean
-    frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
+    frequency?:
+    | 'daily'
+    | 'bi-daily'
+    | 'weekly'
+    | 'fortnightly'
+    | 'monthly'
+    | 'quarterly'
+    | '6-monthly'
+    | 'yearly'
   }) => {
     try {
       await createTask({
         title: params.title,
-        parentCategoryId: params.parentCategoryId,
+        parentTaskId: params.parentTaskId,
         dueDate: params.dueDate,
-        repeatEnabled: params.repeatEnabled,
         frequency: params.frequency,
       })
       setDrawerOpen(false)
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to create task.',
-      )
-    }
-  }
-
-  const startEditing = (id: Id<'categories'>, currentName: string) => {
-    setEditingId(id)
-    setDraftNames((prev) => ({
-      ...prev,
-      [id]: currentName,
-    }))
-  }
-
-  const cancelEditing = (id: Id<'categories'>) => {
-    setEditingId((current) => (current === id ? null : current))
-    setDraftNames((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-  }
-
-  const saveEditing = async (
-    id: Id<'categories'>,
-    currentName: string,
-  ) => {
-    const trimmed = (draftNames[id] ?? '').trim()
-    if (!trimmed || trimmed === currentName) {
-      cancelEditing(id)
-      return
-    }
-    try {
-      await updateCategory({ id, name: trimmed })
-      cancelEditing(id)
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to rename category.',
-      )
-    }
-  }
-
-  const handleDelete = async (id: Id<'categories'>) => {
-    try {
-      await deleteCategory({ id })
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete category.',
       )
     }
   }
@@ -437,12 +479,13 @@ function DailyView() {
     id: Id<'tasks'>,
     currentCompleted: boolean,
   ) => {
+    if (currentCompleted) return
     if (!currentCompleted) {
       setCelebratingTaskId(id)
       setTimeout(() => setCelebratingTaskId(null), 500)
     }
     try {
-      await toggleTaskCompletion({ id })
+      await completeTaskAndSubtasks({ taskId: id })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update task.',
@@ -492,10 +535,10 @@ function DailyView() {
                   : 'Monthly'}
             </p>
             <h1 className="text-4xl font-semibold text-slate-100">
-              Categories
+              Tasks
             </h1>
             <p className="text-base text-slate-400">
-              Create a root category to organize today.
+              Create a root task to organize today.
             </p>
           </div>
         </header>
@@ -530,139 +573,19 @@ function DailyView() {
           <Button
             className="w-full sm:w-auto"
             onClick={() => setDrawerOpen(true)}
-            aria-label="Open create drawer to add category or task"
+            aria-label="Open create drawer to add task"
           >
-            Create
+            Add task
           </Button>
           <CreationDrawer
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
-            onAddCategory={handleAddCategory}
+            onAddCategory={async () => {}}
             onAddTask={handleAddTask}
-            title="Create category or task"
+            title="Add task"
             defaultDueDate={selectedDate}
           />
         </div>
-
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
-            <Folder className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
-            Your categories
-          </h2>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-            {categories === undefined ? (
-              <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading categories">
-                <Spinner aria-label="Loading categories" size={24} />
-                <p className="text-sm text-slate-500">Loading categories...</p>
-                <ul className="w-full space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <ListRowSkeleton key={i} />
-                  ))}
-                </ul>
-              </div>
-            ) : categories.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No categories">
-                <FolderOpen className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
-                <div className="space-y-1">
-                  <p className="text-base font-medium text-slate-300">No categories yet</p>
-                  <p className="text-sm text-slate-500">Create one to organize your tasks.</p>
-                </div>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {categories.map((category) => {
-                  const draftName = draftNames[category._id] ?? ''
-                  return (
-                    <li
-                      key={category._id}
-                      className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
-                    >
-                      {editingId === category._id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={draftName}
-                            onChange={(event) =>
-                              setDraftNames((prev) => ({
-                                ...prev,
-                                [category._id]: event.target.value,
-                              }))
-                            }
-                            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-                            aria-label="Rename category"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              className="h-9 px-4"
-                              disabled={
-                                !draftName.trim() ||
-                                draftName.trim() === category.name
-                              }
-                              onClick={() =>
-                                saveEditing(category._id, category.name)
-                              }
-                              aria-label="Save category name"
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() => cancelEditing(category._id)}
-                              aria-label="Cancel renaming category"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <Folder className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
-                          <div className="flex min-w-0 flex-1 flex-col gap-2">
-                            <Link
-                              to="/categories/$categoryId"
-                              params={{ categoryId: category._id }}
-                              className="truncate text-left text-slate-100 hover:text-slate-200"
-                            >
-                              {category.name}
-                            </Link>
-                            <CategoryCompletionIndicator
-                              categoryId={category._id}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() =>
-                                startEditing(category._id, category.name)
-                              }
-                              aria-label={`Rename category ${category.name}`}
-                            >
-                              Rename
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              className="h-9 px-4"
-                              onClick={() => handleDelete(category._id)}
-                              aria-label={`Delete category ${category.name}`}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </div>
-        </section>
 
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
@@ -696,7 +619,7 @@ function DailyView() {
                         : 'No tasks due this month'}
                   </p>
                   <p className="text-sm text-slate-500">
-                    Add a task or open a category to see tasks here.
+                    Add a task to see it here.
                   </p>
                 </div>
               </div>
@@ -705,101 +628,24 @@ function DailyView() {
                 {rootTasks.map((task) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
                   return (
-                    <li
+                    <TaskRow
                       key={task._id}
-                      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
-                        celebratingTaskId === task._id
-                          ? 'animate-completion-bounce'
-                          : ''
-                      }`}
-                    >
-                      {editingTaskId === task._id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={draftTitle}
-                            onChange={(event) =>
-                              setDraftTaskTitles((prev) => ({
-                                ...prev,
-                                [task._id]: event.target.value,
-                              }))
-                            }
-                            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
-                            aria-label="Rename task"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              className="h-9 px-4"
-                              disabled={
-                                !draftTitle.trim() ||
-                                draftTitle.trim() === task.title
-                              }
-                              onClick={() =>
-                                saveTaskEditing(task._id, task.title)
-                              }
-                              aria-label="Save task title"
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() => cancelTaskEditing(task._id)}
-                              aria-label="Cancel renaming task"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
-                          <label className="flex flex-1 items-center gap-3">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
-                              checked={task.isCompleted}
-                              onChange={() =>
-                                handleTaskToggle(task._id, !!task.isCompleted)}
-                              aria-label={`Mark ${task.title} complete`}
-                            />
-                            <span
-                              className={`flex-1 ${
-                                task.isCompleted
-                                  ? 'text-slate-500 line-through'
-                                  : ''
-                              }`}
-                            >
-                              {task.title}
-                            </span>
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() =>
-                                startTaskEditing(task._id, task.title)
-                              }
-                              aria-label={`Rename task ${task.title}`}
-                            >
-                              Rename
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              className="h-9 px-4"
-                              onClick={() => handleTaskDelete(task._id)}
-                              aria-label={`Delete task ${task.title}`}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
+                      task={task}
+                      editingTaskId={editingTaskId}
+                      draftTitle={draftTitle}
+                      setDraftTitle={(value) =>
+                        setDraftTaskTitles((prev) => ({
+                          ...prev,
+                          [task._id]: value,
+                        }))
+                      }
+                      celebratingTaskId={celebratingTaskId}
+                      startEditing={startTaskEditing}
+                      saveEditing={saveTaskEditing}
+                      cancelEditing={cancelTaskEditing}
+                      handleDelete={handleTaskDelete}
+                      handleComplete={handleTaskToggle}
+                    />
                   )
                 })}
               </ul>
