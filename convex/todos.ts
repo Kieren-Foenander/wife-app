@@ -65,7 +65,7 @@ function nextDueAfter(lastCompletedMs: number, frequency: Frequency): number {
 /** Whether a task is due on the given day (UTC). Non-recurring: due if not completed. Recurring: due if next due <= end of day. */
 export function isTaskDueToday(
   task: {
-    isCompleted: boolean
+    isCompleted?: boolean
     lastCompletedDate?: number
     repeatEnabled?: boolean
     frequency?: Frequency
@@ -334,14 +334,14 @@ export const updateTask = mutation({
       title?: string
       repeatEnabled?: boolean
       frequency?:
-        | 'daily'
-        | 'bi-daily'
-        | 'weekly'
-        | 'fortnightly'
-        | 'monthly'
-        | 'quarterly'
-        | '6-monthly'
-        | 'yearly'
+      | 'daily'
+      | 'bi-daily'
+      | 'weekly'
+      | 'fortnightly'
+      | 'monthly'
+      | 'quarterly'
+      | '6-monthly'
+      | 'yearly'
     } = {}
     if (args.title !== undefined) patch.title = args.title
     if (args.repeatEnabled !== undefined) patch.repeatEnabled = args.repeatEnabled

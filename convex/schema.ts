@@ -26,7 +26,7 @@ export default defineSchema({
   tasks: defineTable({
     title: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
-    isCompleted: v.boolean(),
+    isCompleted: v.optional(v.boolean()),
     lastCompletedDate: v.optional(v.number()),
     repeatEnabled: v.optional(v.boolean()),
     frequency: v.optional(frequencyValidator),
