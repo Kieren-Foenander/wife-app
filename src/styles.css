@@ -145,6 +145,26 @@ code {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Completion micro-interaction: subtle bounce when task is marked complete */
+@keyframes completion-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-completion-bounce {
+  animation: completion-bounce 0.45s ease-out;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

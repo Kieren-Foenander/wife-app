@@ -28,6 +28,8 @@ function CategoryDetail() {
   const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
     Record<string, boolean>
   >({})
+  const [celebratingTaskId, setCelebratingTaskId] =
+    useState<Id<'tasks'> | null>(null)
   const completionOverride = children
     ? {
         total: children.tasks.length,
@@ -93,6 +95,10 @@ function CategoryDetail() {
     id: Id<'tasks'>,
     currentCompleted: boolean,
   ) => {
+    if (!currentCompleted) {
+      setCelebratingTaskId(id)
+      setTimeout(() => setCelebratingTaskId(null), 500)
+    }
     setTaskCompletionOverrides((prev) => ({
       ...prev,
       [id]: !currentCompleted,
@@ -259,7 +265,11 @@ function CategoryDetail() {
                   return (
                     <li
                       key={task._id}
-                      className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                      className={`flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
+                        celebratingTaskId === task._id
+                          ? 'animate-completion-bounce'
+                          : ''
+                      }`}
                     >
                       <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                       <label className="flex flex-1 items-center gap-3">

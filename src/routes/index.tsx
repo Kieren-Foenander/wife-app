@@ -182,6 +182,8 @@ function DailyView() {
     id: Id<'tasks'>
     message: string
   } | null>(null)
+  const [celebratingTaskId, setCelebratingTaskId] =
+    useState<Id<'tasks'> | null>(null)
   const [deleteError, setDeleteError] = useState<{
     id: Id<'categories'>
     message: string
@@ -316,7 +318,14 @@ function DailyView() {
     }
   }
 
-  const handleTaskToggle = async (id: Id<'tasks'>) => {
+  const handleTaskToggle = async (
+    id: Id<'tasks'>,
+    currentCompleted: boolean,
+  ) => {
+    if (!currentCompleted) {
+      setCelebratingTaskId(id)
+      setTimeout(() => setCelebratingTaskId(null), 500)
+    }
     await toggleTaskCompletion({ id })
   }
 
@@ -520,7 +529,11 @@ function DailyView() {
                   return (
                     <li
                       key={task._id}
-                      className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
+                        celebratingTaskId === task._id
+                          ? 'animate-completion-bounce'
+                          : ''
+                      }`}
                     >
                       {editingTaskId === task._id ? (
                         <>
@@ -567,7 +580,8 @@ function DailyView() {
                               type="checkbox"
                               className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
                               checked={task.isCompleted}
-                              onChange={() => handleTaskToggle(task._id)}
+                              onChange={() =>
+                                handleTaskToggle(task._id, !!task.isCompleted)}
                               aria-label={`Mark ${task.title} complete`}
                             />
                             <span
