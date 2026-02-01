@@ -2,9 +2,15 @@
 
 This is your Ralph plan file. The agent reads this file and the last 10 commit messages (`.ralph-recent-commits.txt`) on each run, picks the next incomplete task, implements it, ticks off the item here, then commits with progress in the commit message.
 
-Format: markdown checklists. One task per iteration; run feedback loops, then UI verification via Cursor browser if needed, then tick the PRD item and commit with progress in the commit message. See [docs/RALPH.md](docs/RALPH.md).
+Format: markdown checklists. One task per iteration; run feedback loops, then UI verification via Playwright e2e (`pnpm run e2e`) if the task involves UI, then tick the PRD item and commit with progress in the commit message. See [docs/RALPH.md](docs/RALPH.md).
 
 ---
+
+Name: Wife App
+
+Goal: A productivity and organization application designed to provide structure, clear the mind, and offer motivation through task management. it is a web application but specifically and purposely built for mobile use primarily so style should refelct that of a mobile app more then a website
+
+Target User: Individuals needing to manage recurring responsibilities (e.g., homeschooling, household chores) with a focus on simplicity and repetition.
 
 ## Phase 0: Audit, demo isolation, and scaffolding
 

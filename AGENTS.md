@@ -10,6 +10,7 @@ Non-standard commands:
 - `pnpm typecheck` - TypeScript check (tsc --noEmit)
 - `pnpm convex:check` - Validates Convex backend (convex codegen)
 - `pnpm feedback` - Runs typecheck, convex:check, test, and lint (Ralph feedback loops)
+- `pnpm e2e` - Playwright e2e tests (starts dev server, runs e2e/; use for UI verification in Ralph)
 
 For React patterns and conventions, see `docs/REACT.md`. For Convex conventions, see `.cursorrules`. For running a Ralph loop with Cursor Agent CLI, see `docs/RALPH.md`.
 

@@ -13,3 +13,6 @@ count.txt
 todos.json
 .env.local
 .ralph-recent-commits.txt
+test-results
+playwright-report
+playwright/.cache

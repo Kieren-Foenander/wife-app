@@ -17,7 +17,7 @@ PROMPT='@PRD.md @.ralph-recent-commits.txt @AGENTS.md @docs/RALPH.md \
    - Tests: pnpm run test (must pass) \
    - Lint: pnpm run lint (must pass) \
    Fix any failures before committing. \
-4. If the task involves UI: use the Cursor browser MCP to test the app as a user (pnpm run dev, then open http://localhost:3000 and verify). Fix any issues. \
+4. If the task involves UI: run Playwright e2e to verify (pnpm run e2e). Fix any failures. Optionally use Playwright MCP or Cursor browser MCP if available for manual checks. \
 5. Before committing: tick off the completed PRD item in PRD.md (mark the checkbox [x]). \
 6. Commit your changes. Write what you did (progress summary) IN THE COMMIT MESSAGE body—do not use a progress file. \
 ONLY DO ONE TASK AT A TIME.'
