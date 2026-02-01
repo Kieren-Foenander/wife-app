@@ -15,8 +15,13 @@ function DailyView() {
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
+  const [deleteError, setDeleteError] = useState<{
+    id: Id<'categories'>
+    message: string
+  } | null>(null)
   const createCategory = useMutation(api.todos.createCategory)
   const updateCategory = useMutation(api.todos.updateCategory)
+  const deleteCategory = useMutation(api.todos.deleteCategory)
   const categories = useQuery(api.todos.listCategories)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -31,6 +36,7 @@ function DailyView() {
 
   const startEditing = (id: Id<'categories'>, currentName: string) => {
     setEditingId(id)
+    setDeleteError((current) => (current?.id === id ? null : current))
     setDraftNames((prev) => ({
       ...prev,
       [id]: currentName,
@@ -57,6 +63,17 @@ function DailyView() {
     }
     await updateCategory({ id, name: trimmed })
     cancelEditing(id)
+  }
+
+  const handleDelete = async (id: Id<'categories'>) => {
+    setDeleteError(null)
+    try {
+      await deleteCategory({ id })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete category.'
+      setDeleteError({ id, message })
+    }
   }
 
   return (
@@ -112,6 +129,7 @@ function DailyView() {
               <ul className="space-y-2">
                 {categories.map((category) => {
                   const draftName = draftNames[category._id] ?? ''
+                  const showDeleteError = deleteError?.id === category._id
                   return (
                     <li
                       key={category._id}
@@ -157,18 +175,33 @@ function DailyView() {
                       ) : (
                         <>
                           <span className="flex-1">{category.name}</span>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-9 px-4"
-                            onClick={() =>
-                              startEditing(category._id, category.name)
-                            }
-                          >
-                            Rename
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-9 px-4"
+                              onClick={() =>
+                                startEditing(category._id, category.name)
+                              }
+                            >
+                              Rename
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              className="h-9 px-4"
+                              onClick={() => handleDelete(category._id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </>
                       )}
+                      {showDeleteError ? (
+                        <p className="w-full text-xs text-rose-300">
+                          {deleteError.message}
+                        </p>
+                      ) : null}
                     </li>
                   )
                 })}

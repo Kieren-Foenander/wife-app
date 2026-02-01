@@ -12,6 +12,7 @@ export default defineSchema({
   }),
   tasks: defineTable({
     title: v.string(),
+    categoryId: v.optional(v.id('categories')),
   }),
   todos: defineTable({
     text: v.string(),

@@ -26,6 +26,20 @@ export const updateCategory = mutation({
   },
 })
 
+export const deleteCategory = mutation({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    const hasTasks = await ctx.db
+      .query('tasks')
+      .filter((q) => q.eq(q.field('categoryId'), args.id))
+      .first()
+    if (hasTasks) {
+      throw new Error('Category has tasks. Remove them before deleting.')
+    }
+    return await ctx.db.delete(args.id)
+  },
+})
+
 export const listTasks = query({
   args: {},
   handler: async (ctx) => {
