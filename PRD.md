@@ -17,8 +17,8 @@ Format: markdown checklists. One task per iteration; run feedback loops, then UI
 ## Phase 1: Core data model & CRUD (categories + tasks)
 
 - [x] Category create (root): Mutation + UI form to create root category on Daily view
-- [ ] Category list (root): Query + show list in Daily view
-- [ ] Category update: Mutation + UI to rename a category
+- [x] Category list (root): Query + show list in Daily view
+- [x] Category update: Mutation + UI to rename a category
 - [ ] Category delete: Mutation + UI delete (only if empty; show message if children exist)
 - [ ] Task create (root): Mutation + UI form to create root task
 - [ ] Task list (root): Query + UI list of uncategorized tasks on Daily view

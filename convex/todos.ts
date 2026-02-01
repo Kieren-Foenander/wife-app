@@ -17,6 +17,15 @@ export const createCategory = mutation({
   },
 })
 
+export const updateCategory = mutation({
+  args: { id: v.id('categories'), name: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.patch(args.id, {
+      name: args.name,
+    })
+  },
+})
+
 export const listTasks = query({
   args: {},
   handler: async (ctx) => {

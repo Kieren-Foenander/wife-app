@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { Button } from '../components/ui/button'
 import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/')({
   ssr: false,
@@ -12,7 +13,11 @@ export const Route = createFileRoute('/')({
 
 function DailyView() {
   const [name, setName] = useState('')
+  const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
+  const [draftNames, setDraftNames] = useState<Record<string, string>>({})
   const createCategory = useMutation(api.todos.createCategory)
+  const updateCategory = useMutation(api.todos.updateCategory)
+  const categories = useQuery(api.todos.listCategories)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -22,6 +27,36 @@ function DailyView() {
     }
     await createCategory({ name: trimmed })
     setName('')
+  }
+
+  const startEditing = (id: Id<'categories'>, currentName: string) => {
+    setEditingId(id)
+    setDraftNames((prev) => ({
+      ...prev,
+      [id]: currentName,
+    }))
+  }
+
+  const cancelEditing = (id: Id<'categories'>) => {
+    setEditingId((current) => (current === id ? null : current))
+    setDraftNames((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  const saveEditing = async (
+    id: Id<'categories'>,
+    currentName: string,
+  ) => {
+    const trimmed = (draftNames[id] ?? '').trim()
+    if (!trimmed || trimmed === currentName) {
+      cancelEditing(id)
+      return
+    }
+    await updateCategory({ id, name: trimmed })
+    cancelEditing(id)
   }
 
   return (
@@ -63,6 +98,84 @@ function DailyView() {
             </Button>
           </div>
         </form>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Your categories
+          </h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            {categories === undefined ? (
+              <p className="text-sm text-slate-500">Loading categories...</p>
+            ) : categories.length === 0 ? (
+              <p className="text-sm text-slate-500">No categories yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {categories.map((category) => {
+                  const draftName = draftNames[category._id] ?? ''
+                  return (
+                    <li
+                      key={category._id}
+                      className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                    >
+                      {editingId === category._id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={draftName}
+                            onChange={(event) =>
+                              setDraftNames((prev) => ({
+                                ...prev,
+                                [category._id]: event.target.value,
+                              }))
+                            }
+                            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              className="h-9 px-4"
+                              disabled={
+                                !draftName.trim() ||
+                                draftName.trim() === category.name
+                              }
+                              onClick={() =>
+                                saveEditing(category._id, category.name)
+                              }
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-9 px-4"
+                              onClick={() => cancelEditing(category._id)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1">{category.name}</span>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-9 px-4"
+                            onClick={() =>
+                              startEditing(category._id, category.name)
+                            }
+                          >
+                            Rename
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )
