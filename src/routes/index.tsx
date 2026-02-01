@@ -13,6 +13,7 @@ export const Route = createFileRoute('/')({
 
 function DailyView() {
   const [name, setName] = useState('')
+  const [taskTitle, setTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
   const [deleteError, setDeleteError] = useState<{
@@ -20,6 +21,7 @@ function DailyView() {
     message: string
   } | null>(null)
   const createCategory = useMutation(api.todos.createCategory)
+  const createTask = useMutation(api.todos.createTask)
   const updateCategory = useMutation(api.todos.updateCategory)
   const deleteCategory = useMutation(api.todos.deleteCategory)
   const categories = useQuery(api.todos.listCategories)
@@ -32,6 +34,18 @@ function DailyView() {
     }
     await createCategory({ name: trimmed })
     setName('')
+  }
+
+  const handleTaskSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault()
+    const trimmed = taskTitle.trim()
+    if (!trimmed) {
+      return
+    }
+    await createTask({ title: trimmed })
+    setTaskTitle('')
   }
 
   const startEditing = (id: Id<'categories'>, currentName: string) => {
@@ -112,6 +126,31 @@ function DailyView() {
               disabled={!name.trim()}
             >
               Create
+            </Button>
+          </div>
+        </form>
+
+        <form
+          onSubmit={handleTaskSubmit}
+          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
+        >
+          <label className="mb-3 block text-sm font-medium text-slate-300">
+            Task title
+          </label>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={taskTitle}
+              onChange={(event) => setTaskTitle(event.target.value)}
+              placeholder="Pay rent, Call mom"
+              className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+            />
+            <Button
+              type="submit"
+              className="h-10 px-6"
+              disabled={!taskTitle.trim()}
+            >
+              Add task
             </Button>
           </div>
         </form>
