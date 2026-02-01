@@ -208,8 +208,18 @@ function DailyView() {
     setDrawerOpen(false)
   }
 
-  const handleAddTask = async (title: string) => {
-    await createTask({ title })
+  const handleAddTask = async (params: {
+    title: string
+    parentCategoryId?: Id<'categories'>
+    repeatEnabled?: boolean
+    frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
+  }) => {
+    await createTask({
+      title: params.title,
+      parentCategoryId: params.parentCategoryId,
+      repeatEnabled: params.repeatEnabled,
+      frequency: params.frequency,
+    })
     setDrawerOpen(false)
   }
 
