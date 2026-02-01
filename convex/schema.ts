@@ -17,6 +17,7 @@ export default defineSchema({
   categories: defineTable({
     name: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
+    color: v.optional(v.string()),
   }),
   products: defineTable({
     title: v.string(),

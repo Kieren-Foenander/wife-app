@@ -297,21 +297,30 @@ export const getCategoryCompletion = query({
 })
 
 export const createCategory = mutation({
-  args: { name: v.string(), parentCategoryId: v.optional(v.id('categories')) },
+  args: {
+    name: v.string(),
+    parentCategoryId: v.optional(v.id('categories')),
+    color: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     return await ctx.db.insert('categories', {
       name: args.name,
       parentCategoryId: args.parentCategoryId,
+      color: args.color,
     })
   },
 })
 
 export const updateCategory = mutation({
-  args: { id: v.id('categories'), name: v.string() },
+  args: {
+    id: v.id('categories'),
+    name: v.string(),
+    color: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db.patch(args.id, {
-      name: args.name,
-    })
+    const patch: { name: string; color?: string } = { name: args.name }
+    if (args.color !== undefined) patch.color = args.color
+    return await ctx.db.patch(args.id, patch)
   },
 })
 

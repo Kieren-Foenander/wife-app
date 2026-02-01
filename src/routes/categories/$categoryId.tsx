@@ -60,10 +60,15 @@ function CategoryDetail() {
     ? effectiveCompletion.completed < effectiveCompletion.total
     : false
 
-  const handleAddCategory = async (name: string) => {
+  const handleAddCategory = async (params: {
+    name: string
+    parentCategoryId?: Id<'categories'>
+    color?: string
+  }) => {
     await createCategory({
-      name,
-      parentCategoryId: categoryId as Id<'categories'>,
+      name: params.name,
+      parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
+      color: params.color,
     })
     setDrawerOpen(false)
   }

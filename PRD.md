@@ -70,7 +70,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] Drawer component: Slide-up panel for creating task/category
 - [x] Mode toggle: New Task vs New Category in drawer
 - [x] Task fields: Title, Parent, Repeat toggle, Frequency select
-- [ ] Category fields: Name, Parent, Color
+- [x] Category fields: Name, Parent, Color
 - [ ] Parent dropdown: Select any category as parent
 
 ## Phase 7: Theme + UI polish

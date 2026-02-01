@@ -35,6 +35,15 @@ const FREQUENCY_OPTIONS: Array<{ value: TaskFrequency; label: string }> = [
   { value: 'yearly', label: 'Yearly' },
 ]
 
+const CATEGORY_COLOR_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '#fecaca', label: 'Rose' },
+  { value: '#fed7aa', label: 'Peach' },
+  { value: '#fef08a', label: 'Yellow' },
+  { value: '#bbf7d0', label: 'Mint' },
+  { value: '#bae6fd', label: 'Sky' },
+  { value: '#e9d5ff', label: 'Lavender' },
+]
+
 export type AddTaskParams = {
   title: string
   parentCategoryId?: Id<'categories'>
@@ -42,12 +51,18 @@ export type AddTaskParams = {
   frequency?: TaskFrequency
 }
 
+export type AddCategoryParams = {
+  name: string
+  parentCategoryId?: Id<'categories'>
+  color?: string
+}
+
 type CreationDrawerProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** When set, new category/task are created under this category; when null, root. */
   parentCategoryId?: Id<'categories'> | null
-  onAddCategory: (name: string) => Promise<void>
+  onAddCategory: (params: AddCategoryParams) => Promise<void>
   onAddTask: (params: AddTaskParams) => Promise<void>
   /** Title shown in drawer header. */
   title?: string
@@ -63,6 +78,8 @@ export function CreationDrawer({
 }: CreationDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('category')
   const [categoryName, setCategoryName] = useState('')
+  const [categoryParentId, setCategoryParentId] = useState<Id<'categories'> | ''>('')
+  const [categoryColor, setCategoryColor] = useState<string>('')
   const [taskTitle, setTaskTitle] = useState('')
   const [taskParentId, setTaskParentId] = useState<Id<'categories'> | ''>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
@@ -72,6 +89,7 @@ export function CreationDrawer({
   useEffect(() => {
     if (open) {
       setTaskParentId(parentCategoryId ?? '')
+      setCategoryParentId(parentCategoryId ?? '')
     }
   }, [open, parentCategoryId])
 
@@ -79,7 +97,11 @@ export function CreationDrawer({
     e.preventDefault()
     const trimmed = categoryName.trim()
     if (!trimmed) return
-    await onAddCategory(trimmed)
+    await onAddCategory({
+      name: trimmed,
+      parentCategoryId: categoryParentId || undefined,
+      color: categoryColor || undefined,
+    })
     setCategoryName('')
   }
 
@@ -142,24 +164,72 @@ export function CreationDrawer({
           {mode === 'category' && (
             <form
               onSubmit={handleCategorySubmit}
-              className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+              className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4"
             >
-              <label className="mb-2 block text-sm font-medium text-slate-300">
-                Category name
-              </label>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Category name
+                </label>
                 <input
                   type="text"
                   value={categoryName}
                   onChange={(e) => setCategoryName(e.target.value)}
                   placeholder="Laundry, Groceries, Health"
-                  className="h-10 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
                   aria-label="Category name"
                 />
-                <Button type="submit" className="h-10 px-6" disabled={!categoryName.trim()}>
-                  Create category
-                </Button>
               </div>
+              <div>
+                <label
+                  htmlFor="category-parent"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Parent category
+                </label>
+                <select
+                  id="category-parent"
+                  value={categoryParentId}
+                  onChange={(e) =>
+                    setCategoryParentId(
+                      e.target.value ? (e.target.value as Id<'categories'>) : '',
+                    )
+                  }
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  aria-label="Parent category"
+                >
+                  <option value="">None (root)</option>
+                  {categories?.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="category-color"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Color
+                </label>
+                <select
+                  id="category-color"
+                  value={categoryColor}
+                  onChange={(e) => setCategoryColor(e.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  aria-label="Category color"
+                >
+                  <option value="">None</option>
+                  {CATEGORY_COLOR_OPTIONS.map((opt) => (
+                    <option key={opt.value || 'none'} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" className="h-10 w-full px-6 sm:w-auto" disabled={!categoryName.trim()}>
+                Create category
+              </Button>
             </form>
           )}
           {mode === 'task' && (

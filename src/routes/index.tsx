@@ -203,8 +203,16 @@ function DailyView() {
         ? rootTasksDueInMonth
         : rootTasksDueToday
 
-  const handleAddCategory = async (name: string) => {
-    await createCategory({ name })
+  const handleAddCategory = async (params: {
+    name: string
+    parentCategoryId?: Id<'categories'>
+    color?: string
+  }) => {
+    await createCategory({
+      name: params.name,
+      parentCategoryId: params.parentCategoryId,
+      color: params.color,
+    })
     setDrawerOpen(false)
   }
 
