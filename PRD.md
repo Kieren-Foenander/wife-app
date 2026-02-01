@@ -12,7 +12,7 @@ Format: markdown checklists. One task per iteration; run feedback loops, then UI
 - [x] Demo isolation plan: Preserve demo routes but keep them out of app navigation (e.g. /docs or /demo, not in main nav)
 - [x] Add minimal data model skeleton for categories/tasks in convex/schema.ts; `pnpm run convex:check` passes
 - [x] Create placeholder Convex query/mutation stubs in convex/todos.ts; `pnpm run typecheck` passes
-- [ ] Wire Convex provider in app root; app boots with `pnpm run dev` and no console errors
+- [x] Wire Convex provider in app root; app boots with `pnpm run dev` and no console errors
 
 ## Phase 1: Core data model & CRUD (categories + tasks)
 
