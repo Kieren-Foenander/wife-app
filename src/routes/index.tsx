@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { Folder, ListTodo } from 'lucide-react'
+import { ClipboardList, Folder, FolderOpen, ListTodo } from 'lucide-react'
 
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../components/CreationDrawer'
@@ -403,7 +403,13 @@ function DailyView() {
             {categories === undefined ? (
               <p className="text-sm text-slate-500">Loading categories...</p>
             ) : categories.length === 0 ? (
-              <p className="text-sm text-slate-500">No categories yet.</p>
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No categories">
+                <FolderOpen className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-slate-300">No categories yet</p>
+                  <p className="text-sm text-slate-500">Create one to organize your tasks.</p>
+                </div>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {categories.map((category) => {
@@ -514,13 +520,21 @@ function DailyView() {
             {rootTasks === undefined ? (
               <p className="text-sm text-slate-500">Loading tasks...</p>
             ) : rootTasks.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                {view === 'day'
-                  ? 'No tasks due today.'
-                  : view === 'week'
-                    ? 'No tasks due this week.'
-                    : 'No tasks due this month.'}
-              </p>
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
+                <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-slate-300">
+                    {view === 'day'
+                      ? 'No tasks due today'
+                      : view === 'week'
+                        ? 'No tasks due this week'
+                        : 'No tasks due this month'}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Add a task or open a category to see tasks here.
+                  </p>
+                </div>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {rootTasks.map((task) => {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { Folder, ListTodo } from 'lucide-react'
+import { ClipboardList, Folder, FolderOpen, ListTodo } from 'lucide-react'
 
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../../components/CreationDrawer'
@@ -219,9 +219,13 @@ function CategoryDetail() {
             {children === undefined ? (
               <p className="text-sm text-slate-500">Loading categories...</p>
             ) : children.categories.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                No subcategories yet.
-              </p>
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No subcategories">
+                <FolderOpen className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-slate-300">No subcategories yet</p>
+                  <p className="text-sm text-slate-500">Add a category to break this down.</p>
+                </div>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {children.categories.map((child) => (
@@ -254,9 +258,13 @@ function CategoryDetail() {
             {children === undefined ? (
               <p className="text-sm text-slate-500">Loading tasks...</p>
             ) : children.tasks.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                No tasks in this category yet.
-              </p>
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
+                <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-slate-300">No tasks here yet</p>
+                  <p className="text-sm text-slate-500">Add a task to get started.</p>
+                </div>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {children.tasks.map((task) => {
