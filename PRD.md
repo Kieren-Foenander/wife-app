@@ -37,7 +37,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] Category detail route: Route screen for a category with list of children
 - [x] Child listing: Query children (subcategories + tasks) for a category
 - [x] Breadcrumbs: Query ancestors and render breadcrumb navigation
-- [ ] Context-aware creation: Creation drawer auto-sets parent when on category detail
+- [x] Context-aware creation: Creation drawer auto-sets parent when on category detail
 - [ ] Infinite depth: Navigation works for deep nesting; smoke test with 3+ levels
 
 ## Phase 3: Completion behavior + aggregation

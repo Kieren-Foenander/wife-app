@@ -23,6 +23,8 @@ test.describe('Daily view smoke', () => {
 
   test('category link opens detail route', async ({ page }) => {
     const categoryName = `Chores ${Date.now()}`
+    const childCategoryName = `Laundry ${Date.now()}`
+    const childTaskTitle = `Vacuum ${Date.now()}`
     await page.goto('/')
     await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await page.getByRole('button', { name: 'Create' }).click()
@@ -39,5 +41,25 @@ test.describe('Daily view smoke', () => {
     await expect(
       page.getByRole('heading', { name: /child tasks/i }),
     ).toBeVisible()
+
+    const childCategoryForm = page
+      .getByRole('heading', { name: /add a child category/i })
+      .locator('..')
+    await childCategoryForm
+      .getByPlaceholder(/cleaning, errands/i)
+      .fill(childCategoryName)
+    await childCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await expect(
+      page.getByRole('link', { name: childCategoryName }),
+    ).toBeVisible()
+
+    const childTaskForm = page
+      .getByRole('heading', { name: /add a child task/i })
+      .locator('..')
+    await childTaskForm
+      .getByPlaceholder(/vacuum, wipe counters/i)
+      .fill(childTaskTitle)
+    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await expect(page.getByText(childTaskTitle)).toBeVisible()
   })
 })
