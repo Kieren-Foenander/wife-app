@@ -44,7 +44,7 @@ export const listCategoryAncestors = query({
 export const listCategoryChildren = query({
   args: { id: v.id('categories') },
   handler: async (ctx, args) => {
-    const [categories, tasks] = await Promise.all([
+    const [categories, tasksRaw] = await Promise.all([
       ctx.db
         .query('categories')
         .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
@@ -56,6 +56,10 @@ export const listCategoryChildren = query({
         .order('desc')
         .collect(),
     ])
+    // Uncompleted first, completed last in category detail
+    const tasks = [...tasksRaw].sort(
+      (a, b) => Number(a.isCompleted) - Number(b.isCompleted),
+    )
 
     const visited = new Set<string>()
     const queue = [args.id]

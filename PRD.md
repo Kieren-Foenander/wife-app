@@ -47,7 +47,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] Partial state indicator: UI shows partial completion for categories
 - [x] Auto-completion: Category shows completed when all descendant tasks completed
 - [x] Bulk complete category: Mutation to recursively complete all descendant tasks
-- [ ] Unchecked priority: Sort uncompleted first, completed last in category detail
+- [x] Unchecked priority: Sort uncompleted first, completed last in category detail
 
 ## Phase 4: Recurring tasks
 
