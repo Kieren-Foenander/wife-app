@@ -19,9 +19,10 @@ PROMPT='@PRD.md @progress.txt @AGENTS.md @docs/RALPH.md \
    - Tests: pnpm run test (must pass) \
    - Lint: pnpm run lint (must pass) \
    Fix any failures before committing. \
-3. Update the PRD with what was done. \
-4. Append your progress to progress.txt. \
-5. Commit your changes. \
+3. If the task involves UI: use the Cursor browser MCP to test the app as a user (pnpm run dev, then open http://localhost:3000 and verify). Fix any issues. \
+4. Update the PRD with what was done. \
+5. Append your progress to progress.txt. \
+6. Commit your changes. \
 ONLY WORK ON A SINGLE TASK. \
 If the PRD is complete, output <promise>COMPLETE</promise>.'
 

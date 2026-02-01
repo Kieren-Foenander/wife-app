@@ -14,8 +14,9 @@ PROMPT='@PRD.md @progress.txt @AGENTS.md @docs/RALPH.md \
    - Tests: pnpm run test (must pass) \
    - Lint: pnpm run lint (must pass) \
    Fix any failures before committing. \
-4. Commit your changes. \
-5. Update progress.txt with what you did. \
+4. If the task involves UI: use the Cursor browser MCP to test the app as a user (pnpm run dev, then open http://localhost:3000 and verify). Fix any issues. \
+5. Commit your changes. \
+6. Update progress.txt with what you did. \
 ONLY DO ONE TASK AT A TIME.'
 
 agent -p --force --output-format text "$PROMPT"

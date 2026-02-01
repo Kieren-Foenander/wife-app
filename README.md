@@ -8,6 +8,8 @@ This repo is set up for a [Ralph loop](https://ghuntley.com/ralph/): an AI agent
 
 **Run:** From the repo root, one iteration (human-in-the-loop): `./ralph-once.sh`. Multiple iterations: `./afk-ralph.sh 20` (20 = max iterations; the loop stops when the PRD is complete).
 
+**Browser testing:** Run the Ralph loop from **Cursor’s terminal** (inside the Cursor IDE) so the agent has access to the Cursor browser MCP (cursor-ide-browser / cursor-browser-extension). The agent will then use the browser to test UI tasks as a real user (dev server: `pnpm run dev`, URL: http://localhost:3000). See `docs/RALPH.md` for the full checklist.
+
 The agent uses `docs/RALPH.md` and `AGENTS.md` for instructions and feedback loops (typecheck, Convex check, tests, lint). You can run all checks with `pnpm run feedback`.
 
 ---

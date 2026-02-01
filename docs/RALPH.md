@@ -29,6 +29,7 @@ You work from a plan (PRD) and a progress file. Each iteration you: pick the nex
   3. `pnpm run test` — must pass.
   4. `pnpm run lint` — must pass.
 - **Do not commit if any of the above fail.** Fix the code, then re-run the failing step(s), then commit.
+- **Browser verification (when the task involves UI):** After all feedback loops pass, use the **Cursor browser** MCP (cursor-ide-browser or cursor-browser-extension) to test the app as a real user. Start the dev server if needed (`pnpm run dev` — app at http://localhost:3000), then navigate, click, and verify the implemented feature. Fix any issues you find before committing.
 - **Completion:** When the PRD has no remaining tasks, output exactly: `<promise>COMPLETE</promise>` (so the loop script can stop).
 
 ## Feedback loop commands (reference)
@@ -51,6 +52,17 @@ All four in one command: `pnpm run feedback`.
 5. Run `pnpm run convex:check` → fix if needed.
 6. Run `pnpm run test` → fix if needed.
 7. Run `pnpm run lint` → fix if needed.
-8. Commit your changes.
-9. Append to `progress.txt` what you did.
-10. If the PRD is now complete, output `<promise>COMPLETE</promise>`.
+8. **If the task involves UI:** Use the Cursor browser MCP to test the app as a user. Start `pnpm run dev` if needed; open http://localhost:3000; verify the feature. Fix any issues.
+9. Commit your changes.
+10. Append to `progress.txt` what you did.
+11. If the PRD is now complete, output `<promise>COMPLETE</promise>`.
+
+## Cursor browser (MCP)
+
+You have access to the **Cursor browser** (cursor-ide-browser or cursor-browser-extension). Use it to:
+
+- Navigate to the app (dev server: `pnpm run dev`, URL: http://localhost:3000).
+- Interact with the UI as a user would (click, type, navigate).
+- Verify that the feature you implemented works correctly before committing.
+
+Run the Ralph loop from **Cursor’s terminal** so the agent inherits Cursor’s MCP config and can use the browser tools.
