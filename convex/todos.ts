@@ -15,6 +15,26 @@ export const getCategory = query({
   },
 })
 
+export const listCategoryChildren = query({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    const [categories, tasks] = await Promise.all([
+      ctx.db
+        .query('categories')
+        .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
+        .order('desc')
+        .collect(),
+      ctx.db
+        .query('tasks')
+        .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
+        .order('desc')
+        .collect(),
+    ])
+
+    return { categories, tasks }
+  },
+})
+
 export const createCategory = mutation({
   args: { name: v.string(), parentCategoryId: v.optional(v.id('categories')) },
   handler: async (ctx, args) => {

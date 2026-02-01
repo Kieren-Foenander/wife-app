@@ -15,6 +15,9 @@ function CategoryDetail() {
   const category = useQuery(api.todos.getCategory, {
     id: categoryId as Id<'categories'>,
   })
+  const children = useQuery(api.todos.listCategoryChildren, {
+    id: categoryId as Id<'categories'>,
+  })
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -39,10 +42,63 @@ function CategoryDetail() {
               Category not found
             </h1>
           )}
-          <p className="text-base text-slate-400">
-            Child items will appear here next.
-          </p>
         </header>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Child categories
+          </h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            {children === undefined ? (
+              <p className="text-sm text-slate-500">Loading categories...</p>
+            ) : children.categories.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No subcategories yet.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {children.categories.map((child) => (
+                  <li
+                    key={child._id}
+                    className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                  >
+                    <Link
+                      to="/categories/$categoryId"
+                      params={{ categoryId: child._id }}
+                      className="flex-1 text-left text-slate-100 hover:text-slate-200"
+                    >
+                      {child.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-100">Child tasks</h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            {children === undefined ? (
+              <p className="text-sm text-slate-500">Loading tasks...</p>
+            ) : children.tasks.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No tasks in this category yet.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {children.tasks.map((task) => (
+                  <li
+                    key={task._id}
+                    className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                  >
+                    <span className="flex-1">{task.title}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

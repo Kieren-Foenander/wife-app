@@ -29,6 +29,12 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('link', { name: categoryName })).toBeVisible()
     await page.getByRole('link', { name: categoryName }).click()
     await expect(page.getByRole('heading', { name: categoryName })).toBeVisible()
-    await expect(page.getByText('Category')).toBeVisible()
+    await expect(page.getByText('Category', { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: /child categories/i }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: /child tasks/i }),
+    ).toBeVisible()
   })
 })
