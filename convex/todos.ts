@@ -3,6 +3,91 @@ import { mutation, query } from './_generated/server'
 import { frequencyValidator } from './schema'
 import type { Id } from './_generated/dataModel'
 
+/** Frequency type for next-due computation. */
+type Frequency =
+  | 'daily'
+  | 'bi-daily'
+  | 'weekly'
+  | 'fortnightly'
+  | 'monthly'
+  | 'quarterly'
+  | '6-monthly'
+  | 'yearly'
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/** Start of day UTC (00:00:00.000) for a given timestamp. */
+function startOfDayUTC(ms: number): number {
+  const d = new Date(ms)
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+}
+
+/** Add months to a date (UTC), clamping day if needed). */
+function addMonthsUTC(ms: number, months: number): number {
+  const d = new Date(ms)
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth() + months
+  const day = d.getUTCDate()
+  const normalized = new Date(Date.UTC(y, m, 1))
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  return Date.UTC(
+    normalized.getUTCFullYear(),
+    normalized.getUTCMonth(),
+    Math.min(day, lastDay),
+  )
+}
+
+/** Next due date (start of day UTC) after lastCompletedDate for given frequency. */
+function nextDueAfter(lastCompletedMs: number, frequency: Frequency): number {
+  const start = startOfDayUTC(lastCompletedMs)
+  switch (frequency) {
+    case 'daily':
+      return start + MS_PER_DAY
+    case 'bi-daily':
+      return start + 2 * MS_PER_DAY
+    case 'weekly':
+      return start + 7 * MS_PER_DAY
+    case 'fortnightly':
+      return start + 14 * MS_PER_DAY
+    case 'monthly':
+      return addMonthsUTC(start, 1)
+    case 'quarterly':
+      return addMonthsUTC(start, 3)
+    case '6-monthly':
+      return addMonthsUTC(start, 6)
+    case 'yearly':
+      return addMonthsUTC(start, 12)
+    default:
+      return start + MS_PER_DAY
+  }
+}
+
+/** Whether a task is due on the given day (UTC). Non-recurring: due if not completed. Recurring: due if next due <= end of day. */
+export function isTaskDueToday(
+  task: {
+    isCompleted: boolean
+    lastCompletedDate?: number
+    repeatEnabled?: boolean
+    frequency?: Frequency
+  },
+  todayStartMs: number,
+): boolean {
+  const isRecurring =
+    task.repeatEnabled === true && task.frequency != null
+
+  if (!isRecurring) {
+    return !task.isCompleted
+  }
+
+  if (task.lastCompletedDate == null) {
+    return true
+  }
+
+  const todayEndMs = todayStartMs + MS_PER_DAY - 1
+  const nextDue = nextDueAfter(task.lastCompletedDate, task.frequency!)
+  return nextDue <= todayEndMs
+}
+
 export const listCategories = query({
   args: {},
   handler: async (ctx) => {
@@ -196,6 +281,21 @@ export const listRootTasks = query({
       .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
       .order('desc')
       .collect()
+  },
+})
+
+/** Root tasks that are due today (UTC). Uses lastCompletedDate + frequency for recurring; non-recurring due if not completed. */
+export const listRootTasksDueToday = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const todayStart = startOfDayUTC(now)
+    const rootTasks = await ctx.db
+      .query('tasks')
+      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .order('desc')
+      .collect()
+    return rootTasks.filter((task) => isTaskDueToday(task, todayStart))
   },
 })
 
