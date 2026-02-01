@@ -59,7 +59,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 
 ## Phase 5: View modes (Daily/Weekly/Monthly)
 
-- [ ] View mode state: Day/Week/Month toggle UI
+- [x] View mode state: Day/Week/Month toggle UI
 - [ ] Daily header: Show "Today - [Day Name]"
 - [ ] Weekly view UI: Render week strip with days
 - [ ] Monthly view UI: Render calendar grid

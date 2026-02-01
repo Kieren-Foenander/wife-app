@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
@@ -7,12 +7,21 @@ import { Button } from '../components/ui/button'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
+export type ViewMode = 'day' | 'week' | 'month'
+
 export const Route = createFileRoute('/')({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): { view: ViewMode } => {
+    const view = search.view
+    if (view === 'week' || view === 'month') return { view }
+    return { view: 'day' }
+  },
   component: DailyView,
 })
 
 function DailyView() {
+  const { view } = Route.useSearch()
+  const navigate = useNavigate({ from: '/' })
   const [name, setName] = useState('')
   const [taskTitle, setTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
@@ -152,16 +161,40 @@ function DailyView() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16">
-        <header className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
-            Daily
-          </p>
-          <h1 className="text-4xl font-semibold text-slate-100">
-            Categories
-          </h1>
-          <p className="text-base text-slate-400">
-            Create a root category to organize today.
-          </p>
+        <header className="space-y-4">
+          <div
+            className="inline-flex rounded-xl border border-slate-800 bg-slate-900/60 p-1"
+            role="tablist"
+            aria-label="View mode"
+          >
+            {(['day', 'week', 'month'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={view === mode}
+                onClick={() => navigate({ search: { view: mode } })}
+                className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                  view === mode
+                    ? 'bg-slate-700 text-slate-100'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
+              {view === 'day' ? 'Daily' : view === 'week' ? 'Weekly' : 'Monthly'}
+            </p>
+            <h1 className="text-4xl font-semibold text-slate-100">
+              Categories
+            </h1>
+            <p className="text-base text-slate-400">
+              Create a root category to organize today.
+            </p>
+          </div>
         </header>
 
         <form

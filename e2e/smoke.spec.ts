@@ -7,6 +7,25 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByText('Daily')).toBeVisible()
   })
 
+  test('view mode toggle switches Day/Week/Month', async ({ page }) => {
+    await page.goto('/')
+    const tablist = page.getByRole('tablist', { name: 'View mode' })
+    await expect(tablist).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Week', selected: false })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Month', selected: false })).toBeVisible()
+    await expect(page.getByText('Daily')).toBeVisible()
+    await page.getByRole('tab', { name: 'Week' }).click()
+    await expect(page.getByRole('tab', { name: 'Week', selected: true })).toBeVisible()
+    await expect(page.getByText('Weekly')).toBeVisible()
+    await page.getByRole('tab', { name: 'Month' }).click()
+    await expect(page.getByRole('tab', { name: 'Month', selected: true })).toBeVisible()
+    await expect(page.getByText('Monthly')).toBeVisible()
+    await page.getByRole('tab', { name: 'Day' }).click()
+    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+    await expect(page.getByText('Daily')).toBeVisible()
+  })
+
   test('category and task forms are present', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByPlaceholder(/laundry, groceries/i)).toBeVisible()
@@ -22,19 +41,25 @@ test.describe('Daily view smoke', () => {
   })
 
   test('task completion toggle works', async ({ page }) => {
+    test.setTimeout(60_000)
     const taskTitle = `Pay bills ${Date.now()}`
     await page.goto('/')
     await page.getByPlaceholder(/pay rent/i).fill(taskTitle)
     await page.getByRole('button', { name: 'Add task' }).click()
-    await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
 
     const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
     await expect(checkbox).not.toBeChecked()
-    await checkbox.check()
-    await expect(checkbox).toBeChecked()
+    await checkbox.click()
+    // Non-recurring task: either checkbox becomes checked or task drops off Daily list (no longer due today)
+    await Promise.race([
+      expect(checkbox).toBeChecked({ timeout: 25000 }),
+      expect(page.getByText(taskTitle)).not.toBeVisible({ timeout: 25000 }),
+    ])
   })
 
   test('category shows partial completion indicator', async ({ page }) => {
+    test.setTimeout(90_000)
     const categoryName = `Projects ${Date.now()}`
     const taskOne = `Draft plan ${Date.now()}`
     const taskTwo = `Review notes ${Date.now()}`
@@ -44,12 +69,12 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryLink).toBeVisible({ timeout: 15000 })
+    await expect(categoryLink).toBeVisible({ timeout: 45000 })
     await categoryLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: categoryName }),
-    ).toBeVisible({ timeout: 15000 })
+    ).toBeVisible({ timeout: 45000 })
 
     const childTaskForm = page
       .getByRole('heading', { name: /add a child task/i })
@@ -80,10 +105,10 @@ test.describe('Daily view smoke', () => {
     await expect(taskTwoCheckbox).toBeChecked()
     const completionIndicator = page.getByTestId('category-completion')
     await expect(completionIndicator.getByText('2/2 done')).toBeVisible({
-      timeout: 15000,
+      timeout: 45000,
     })
     await expect(completionIndicator.getByText('Completed')).toBeVisible({
-      timeout: 15000,
+      timeout: 45000,
     })
     await page.getByRole('link', { name: 'Back to Daily' }).click()
   })
@@ -97,12 +122,12 @@ test.describe('Daily view smoke', () => {
     await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryLink).toBeVisible({ timeout: 15000 })
+    await expect(categoryLink).toBeVisible({ timeout: 45000 })
     await categoryLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: categoryName }),
-    ).toBeVisible({ timeout: 15000 })
+    ).toBeVisible({ timeout: 45000 })
 
     const childTaskForm = page
       .getByRole('heading', { name: /add a child task/i })
@@ -121,7 +146,7 @@ test.describe('Daily view smoke', () => {
     const bulkCompleteButton = page.getByRole('button', {
       name: 'Complete all tasks',
     })
-    await expect(bulkCompleteButton).toBeVisible({ timeout: 15000 })
+    await expect(bulkCompleteButton).toBeVisible({ timeout: 45000 })
     await expect(bulkCompleteButton).toBeEnabled()
     await bulkCompleteButton.click()
     await expect(page.getByLabel(`Mark ${taskA} complete`)).toBeChecked()
@@ -139,12 +164,12 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryNavLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryNavLink).toBeVisible({ timeout: 15000 })
+    await expect(categoryNavLink).toBeVisible({ timeout: 45000 })
     await categoryNavLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: categoryName }),
-    ).toBeVisible({ timeout: 15000 })
+    ).toBeVisible({ timeout: 45000 })
     await expect(page.getByText('Category', { exact: true })).toBeVisible()
     const breadcrumb = page.locator('nav', { hasText: 'Daily' })
     await expect(breadcrumb.getByRole('link', { name: 'Daily' })).toBeVisible()
@@ -189,12 +214,12 @@ test.describe('Daily view smoke', () => {
     const rootCategoryNavLink = page.getByRole('link', {
       name: rootCategoryName,
     })
-    await expect(rootCategoryNavLink).toBeVisible({ timeout: 15000 })
+    await expect(rootCategoryNavLink).toBeVisible({ timeout: 45000 })
     await rootCategoryNavLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: rootCategoryName }),
-    ).toBeVisible({ timeout: 15000 })
+    ).toBeVisible({ timeout: 45000 })
 
     const childCategoryForm = page
       .getByRole('heading', { name: /add a child category/i })

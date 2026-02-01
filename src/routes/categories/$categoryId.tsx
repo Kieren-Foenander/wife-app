@@ -125,7 +125,7 @@ function CategoryDetail() {
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16">
         <header className="space-y-3">
           <Button asChild variant="secondary" className="h-9 w-fit px-4">
-            <Link to="/">Back to Daily</Link>
+            <Link to="/" search={{ view: 'day' }}>Back to Daily</Link>
           </Button>
           {ancestors === undefined || category === undefined ? (
             <p className="text-xs uppercase tracking-[0.3em] text-slate-600">
@@ -133,7 +133,7 @@ function CategoryDetail() {
             </p>
           ) : (
             <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-              <Link to="/" className="hover:text-slate-200">
+              <Link to="/" search={{ view: 'day' }} className="hover:text-slate-200">
                 Daily
               </Link>
               {ancestors.map((ancestor) => (
