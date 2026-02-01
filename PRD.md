@@ -22,7 +22,7 @@ Format: markdown checklists. One task per iteration; run feedback loops, then UI
 - [x] Category delete: Mutation + UI delete (only if empty; show message if children exist)
 - [x] Task create (root): Mutation + UI form to create root task
 - [x] Task list (root): Query + UI list of uncategorized tasks on Daily view
-- [ ] Task update: Mutation + UI to rename a task
+- [x] Task update: Mutation + UI to rename a task
 - [ ] Task delete: Mutation + UI delete for task
 
 ## Phase 2: Hierarchy (infinite nesting) + navigation

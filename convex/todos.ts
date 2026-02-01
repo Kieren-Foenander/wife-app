@@ -67,6 +67,15 @@ export const createTask = mutation({
   },
 })
 
+export const updateTask = mutation({
+  args: { id: v.id('tasks'), title: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.patch(args.id, {
+      title: args.title,
+    })
+  },
+})
+
 export const list = query({
   args: {},
   handler: async (ctx) => {

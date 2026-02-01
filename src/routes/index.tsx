@@ -16,6 +16,10 @@ function DailyView() {
   const [taskTitle, setTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
+  const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
+  const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
+    {},
+  )
   const [deleteError, setDeleteError] = useState<{
     id: Id<'categories'>
     message: string
@@ -23,6 +27,7 @@ function DailyView() {
   const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
   const updateCategory = useMutation(api.todos.updateCategory)
+  const updateTask = useMutation(api.todos.updateTask)
   const deleteCategory = useMutation(api.todos.deleteCategory)
   const categories = useQuery(api.todos.listCategories)
   const rootTasks = useQuery(api.todos.listRootTasks)
@@ -89,6 +94,36 @@ function DailyView() {
         error instanceof Error ? error.message : 'Unable to delete category.'
       setDeleteError({ id, message })
     }
+  }
+
+  const startTaskEditing = (id: Id<'tasks'>, currentTitle: string) => {
+    setEditingTaskId(id)
+    setDraftTaskTitles((prev) => ({
+      ...prev,
+      [id]: currentTitle,
+    }))
+  }
+
+  const cancelTaskEditing = (id: Id<'tasks'>) => {
+    setEditingTaskId((current) => (current === id ? null : current))
+    setDraftTaskTitles((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  const saveTaskEditing = async (
+    id: Id<'tasks'>,
+    currentTitle: string,
+  ) => {
+    const trimmed = (draftTaskTitles[id] ?? '').trim()
+    if (!trimmed || trimmed === currentTitle) {
+      cancelTaskEditing(id)
+      return
+    }
+    await updateTask({ id, title: trimmed })
+    cancelTaskEditing(id)
   }
 
   return (
@@ -261,14 +296,68 @@ function DailyView() {
               </p>
             ) : (
               <ul className="space-y-2">
-                {rootTasks.map((task) => (
-                  <li
-                    key={task._id}
-                    className="rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
-                  >
-                    {task.title}
-                  </li>
-                ))}
+                {rootTasks.map((task) => {
+                  const draftTitle = draftTaskTitles[task._id] ?? ''
+                  return (
+                    <li
+                      key={task._id}
+                      className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                    >
+                      {editingTaskId === task._id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={draftTitle}
+                            onChange={(event) =>
+                              setDraftTaskTitles((prev) => ({
+                                ...prev,
+                                [task._id]: event.target.value,
+                              }))
+                            }
+                            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              className="h-9 px-4"
+                              disabled={
+                                !draftTitle.trim() ||
+                                draftTitle.trim() === task.title
+                              }
+                              onClick={() =>
+                                saveTaskEditing(task._id, task.title)
+                              }
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-9 px-4"
+                              onClick={() => cancelTaskEditing(task._id)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1">{task.title}</span>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-9 px-4"
+                            onClick={() =>
+                              startTaskEditing(task._id, task.title)
+                            }
+                          >
+                            Rename
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
