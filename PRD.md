@@ -75,7 +75,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 
 ## Phase 7: Theme + UI polish
 
-- [ ] Pastel theme tokens: Add color palette in src/styles.css
+- [x] Pastel theme tokens: Add color palette in src/styles.css
 - [ ] Typography: Apply friendly rounded font globally
 - [ ] Iconography: Add soft-edged icons for categories/tasks
 - [ ] Micro-interactions: Completion animation (e.g. subtle bounce/confetti)
