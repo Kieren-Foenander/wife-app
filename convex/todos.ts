@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { frequencyValidator } from './schema'
 import type { Id } from './_generated/dataModel'
 
 export const listCategories = query({
@@ -203,7 +204,7 @@ export const createTask = mutation({
     title: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
     repeatEnabled: v.optional(v.boolean()),
-    frequency: v.optional(v.string()),
+    frequency: v.optional(frequencyValidator),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert('tasks', {
@@ -222,15 +223,26 @@ export const updateTask = mutation({
     id: v.id('tasks'),
     title: v.optional(v.string()),
     repeatEnabled: v.optional(v.boolean()),
-    frequency: v.optional(v.string()),
+    frequency: v.optional(frequencyValidator),
   },
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.id)
     if (!task) {
       throw new Error('Task not found')
     }
-    const patch: { title?: string; repeatEnabled?: boolean; frequency?: string } =
-      {}
+    const patch: {
+      title?: string
+      repeatEnabled?: boolean
+      frequency?:
+        | 'daily'
+        | 'bi-daily'
+        | 'weekly'
+        | 'fortnightly'
+        | 'monthly'
+        | 'quarterly'
+        | '6-monthly'
+        | 'yearly'
+    } = {}
     if (args.title !== undefined) patch.title = args.title
     if (args.repeatEnabled !== undefined) patch.repeatEnabled = args.repeatEnabled
     if (args.frequency !== undefined) patch.frequency = args.frequency

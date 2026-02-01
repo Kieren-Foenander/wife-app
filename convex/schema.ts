@@ -1,6 +1,18 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
+/** Valid frequency values for recurring tasks. */
+export const frequencyValidator = v.union(
+  v.literal('daily'),
+  v.literal('bi-daily'),
+  v.literal('weekly'),
+  v.literal('fortnightly'),
+  v.literal('monthly'),
+  v.literal('quarterly'),
+  v.literal('6-monthly'),
+  v.literal('yearly'),
+)
+
 export default defineSchema({
   categories: defineTable({
     name: v.string(),
@@ -17,7 +29,7 @@ export default defineSchema({
     isCompleted: v.boolean(),
     lastCompletedDate: v.optional(v.number()),
     repeatEnabled: v.optional(v.boolean()),
-    frequency: v.optional(v.string()),
+    frequency: v.optional(frequencyValidator),
   }),
   todos: defineTable({
     text: v.string(),

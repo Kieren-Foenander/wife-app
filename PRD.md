@@ -52,7 +52,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 ## Phase 4: Recurring tasks
 
 - [x] Repeat fields: Add repeat settings to tasks (repeatEnabled, frequency)
-- [ ] Frequency enum: Validated options (daily, bi-daily, weekly, fortnightly, monthly, quarterly, 6-monthly, yearly)
+- [x] Frequency enum: Validated options (daily, bi-daily, weekly, fortnightly, monthly, quarterly, 6-monthly, yearly)
 - [ ] Next due logic: Compute whether task is due on Daily view from lastCompletedDate and frequency
 - [ ] Daily view filtering: Only show tasks due for today in daily view
 - [ ] Completion updates: On completing recurring task, update lastCompletedDate; task reappears next interval
