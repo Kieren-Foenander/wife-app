@@ -16,6 +16,8 @@ export default defineSchema({
     parentCategoryId: v.optional(v.id('categories')),
     isCompleted: v.boolean(),
     lastCompletedDate: v.optional(v.number()),
+    repeatEnabled: v.optional(v.boolean()),
+    frequency: v.optional(v.string()),
   }),
   todos: defineTable({
     text: v.string(),

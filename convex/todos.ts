@@ -199,23 +199,42 @@ export const listRootTasks = query({
 })
 
 export const createTask = mutation({
-  args: { title: v.string(), parentCategoryId: v.optional(v.id('categories')) },
+  args: {
+    title: v.string(),
+    parentCategoryId: v.optional(v.id('categories')),
+    repeatEnabled: v.optional(v.boolean()),
+    frequency: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     return await ctx.db.insert('tasks', {
       title: args.title,
       parentCategoryId: args.parentCategoryId,
       isCompleted: false,
       lastCompletedDate: undefined,
+      repeatEnabled: args.repeatEnabled ?? false,
+      frequency: args.frequency,
     })
   },
 })
 
 export const updateTask = mutation({
-  args: { id: v.id('tasks'), title: v.string() },
+  args: {
+    id: v.id('tasks'),
+    title: v.optional(v.string()),
+    repeatEnabled: v.optional(v.boolean()),
+    frequency: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db.patch(args.id, {
-      title: args.title,
-    })
+    const task = await ctx.db.get(args.id)
+    if (!task) {
+      throw new Error('Task not found')
+    }
+    const patch: { title?: string; repeatEnabled?: boolean; frequency?: string } =
+      {}
+    if (args.title !== undefined) patch.title = args.title
+    if (args.repeatEnabled !== undefined) patch.repeatEnabled = args.repeatEnabled
+    if (args.frequency !== undefined) patch.frequency = args.frequency
+    return await ctx.db.patch(args.id, patch)
   },
 })
 
