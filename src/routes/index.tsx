@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, Folder, FolderOpen, ListTodo } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../components/CreationDrawer'
@@ -178,16 +179,8 @@ function DailyView() {
   const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
     {},
   )
-  const [taskDeleteError, setTaskDeleteError] = useState<{
-    id: Id<'tasks'>
-    message: string
-  } | null>(null)
   const [celebratingTaskId, setCelebratingTaskId] =
     useState<Id<'tasks'> | null>(null)
-  const [deleteError, setDeleteError] = useState<{
-    id: Id<'categories'>
-    message: string
-  } | null>(null)
   const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
   const updateCategory = useMutation(api.todos.updateCategory)
@@ -211,12 +204,18 @@ function DailyView() {
     parentCategoryId?: Id<'categories'>
     color?: string
   }) => {
-    await createCategory({
-      name: params.name,
-      parentCategoryId: params.parentCategoryId,
-      color: params.color,
-    })
-    setDrawerOpen(false)
+    try {
+      await createCategory({
+        name: params.name,
+        parentCategoryId: params.parentCategoryId,
+        color: params.color,
+      })
+      setDrawerOpen(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create category.',
+      )
+    }
   }
 
   const handleAddTask = async (params: {
@@ -225,18 +224,23 @@ function DailyView() {
     repeatEnabled?: boolean
     frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
   }) => {
-    await createTask({
-      title: params.title,
-      parentCategoryId: params.parentCategoryId,
-      repeatEnabled: params.repeatEnabled,
-      frequency: params.frequency,
-    })
-    setDrawerOpen(false)
+    try {
+      await createTask({
+        title: params.title,
+        parentCategoryId: params.parentCategoryId,
+        repeatEnabled: params.repeatEnabled,
+        frequency: params.frequency,
+      })
+      setDrawerOpen(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create task.',
+      )
+    }
   }
 
   const startEditing = (id: Id<'categories'>, currentName: string) => {
     setEditingId(id)
-    setDeleteError((current) => (current?.id === id ? null : current))
     setDraftNames((prev) => ({
       ...prev,
       [id]: currentName,
@@ -261,24 +265,28 @@ function DailyView() {
       cancelEditing(id)
       return
     }
-    await updateCategory({ id, name: trimmed })
-    cancelEditing(id)
+    try {
+      await updateCategory({ id, name: trimmed })
+      cancelEditing(id)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to rename category.',
+      )
+    }
   }
 
   const handleDelete = async (id: Id<'categories'>) => {
-    setDeleteError(null)
     try {
       await deleteCategory({ id })
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete category.'
-      setDeleteError({ id, message })
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete category.',
+      )
     }
   }
 
   const startTaskEditing = (id: Id<'tasks'>, currentTitle: string) => {
     setEditingTaskId(id)
-    setTaskDeleteError((current) => (current?.id === id ? null : current))
     setDraftTaskTitles((prev) => ({
       ...prev,
       [id]: currentTitle,
@@ -303,18 +311,23 @@ function DailyView() {
       cancelTaskEditing(id)
       return
     }
-    await updateTask({ id, title: trimmed })
-    cancelTaskEditing(id)
+    try {
+      await updateTask({ id, title: trimmed })
+      cancelTaskEditing(id)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to rename task.',
+      )
+    }
   }
 
   const handleTaskDelete = async (id: Id<'tasks'>) => {
-    setTaskDeleteError(null)
     try {
       await deleteTask({ id })
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete task.'
-      setTaskDeleteError({ id, message })
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete task.',
+      )
     }
   }
 
@@ -326,7 +339,13 @@ function DailyView() {
       setCelebratingTaskId(id)
       setTimeout(() => setCelebratingTaskId(null), 500)
     }
-    await toggleTaskCompletion({ id })
+    try {
+      await toggleTaskCompletion({ id })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update task.',
+      )
+    }
   }
 
   return (
@@ -414,7 +433,6 @@ function DailyView() {
               <ul className="space-y-2">
                 {categories.map((category) => {
                   const draftName = draftNames[category._id] ?? ''
-                  const showDeleteError = deleteError?.id === category._id
                   return (
                     <li
                       key={category._id}
@@ -494,11 +512,6 @@ function DailyView() {
                           </div>
                         </>
                       )}
-                      {showDeleteError ? (
-                        <p className="w-full text-xs text-rose-300">
-                          {deleteError.message}
-                        </p>
-                      ) : null}
                     </li>
                   )
                 })}
@@ -539,7 +552,6 @@ function DailyView() {
               <ul className="space-y-2">
                 {rootTasks.map((task) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
-                  const showTaskDeleteError = taskDeleteError?.id === task._id
                   return (
                     <li
                       key={task._id}
@@ -630,11 +642,6 @@ function DailyView() {
                           </div>
                         </>
                       )}
-                      {showTaskDeleteError ? (
-                        <p className="w-full text-xs text-rose-300">
-                          {taskDeleteError.message}
-                        </p>
-                      ) : null}
                     </li>
                   )
                 })}

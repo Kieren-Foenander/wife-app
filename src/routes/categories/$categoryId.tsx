@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, Folder, FolderOpen, ListTodo } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../../components/CreationDrawer'
@@ -68,12 +69,18 @@ function CategoryDetail() {
     parentCategoryId?: Id<'categories'>
     color?: string
   }) => {
-    await createCategory({
-      name: params.name,
-      parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
-      color: params.color,
-    })
-    setDrawerOpen(false)
+    try {
+      await createCategory({
+        name: params.name,
+        parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
+        color: params.color,
+      })
+      setDrawerOpen(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create category.',
+      )
+    }
   }
 
   const handleAddTask = async (params: {
@@ -82,13 +89,19 @@ function CategoryDetail() {
     repeatEnabled?: boolean
     frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
   }) => {
-    await createTask({
-      title: params.title,
-      parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
-      repeatEnabled: params.repeatEnabled,
-      frequency: params.frequency,
-    })
-    setDrawerOpen(false)
+    try {
+      await createTask({
+        title: params.title,
+        parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
+        repeatEnabled: params.repeatEnabled,
+        frequency: params.frequency,
+      })
+      setDrawerOpen(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create task.',
+      )
+    }
   }
 
   const handleTaskToggle = async (
@@ -103,7 +116,13 @@ function CategoryDetail() {
       ...prev,
       [id]: !currentCompleted,
     }))
-    await toggleTaskCompletion({ id })
+    try {
+      await toggleTaskCompletion({ id })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update task.',
+      )
+    }
   }
 
   const handleBulkComplete = async () => {
@@ -120,6 +139,10 @@ function CategoryDetail() {
     })
     try {
       await bulkCompleteCategory({ id: categoryId as Id<'categories'> })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to complete all tasks.',
+      )
     } finally {
       setIsBulkCompleting(false)
     }

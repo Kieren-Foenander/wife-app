@@ -83,6 +83,6 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 ## Phase 8: UX details + quality
 
 - [x] Empty states: Empty state messaging for lists
-- [ ] Error handling: Error toasts for failed mutations
+- [x] Error handling: Error toasts for failed mutations
 - [ ] Loading states: Spinners/skeletons during fetch
 - [ ] Accessibility pass: Buttons/checkboxes labeled; basic a11y audit
