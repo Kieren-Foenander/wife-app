@@ -20,6 +20,10 @@ function DailyView() {
   const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
     {},
   )
+  const [taskDeleteError, setTaskDeleteError] = useState<{
+    id: Id<'tasks'>
+    message: string
+  } | null>(null)
   const [deleteError, setDeleteError] = useState<{
     id: Id<'categories'>
     message: string
@@ -29,6 +33,7 @@ function DailyView() {
   const updateCategory = useMutation(api.todos.updateCategory)
   const updateTask = useMutation(api.todos.updateTask)
   const deleteCategory = useMutation(api.todos.deleteCategory)
+  const deleteTask = useMutation(api.todos.deleteTask)
   const categories = useQuery(api.todos.listCategories)
   const rootTasks = useQuery(api.todos.listRootTasks)
 
@@ -98,6 +103,7 @@ function DailyView() {
 
   const startTaskEditing = (id: Id<'tasks'>, currentTitle: string) => {
     setEditingTaskId(id)
+    setTaskDeleteError((current) => (current?.id === id ? null : current))
     setDraftTaskTitles((prev) => ({
       ...prev,
       [id]: currentTitle,
@@ -124,6 +130,17 @@ function DailyView() {
     }
     await updateTask({ id, title: trimmed })
     cancelTaskEditing(id)
+  }
+
+  const handleTaskDelete = async (id: Id<'tasks'>) => {
+    setTaskDeleteError(null)
+    try {
+      await deleteTask({ id })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete task.'
+      setTaskDeleteError({ id, message })
+    }
   }
 
   return (
@@ -298,6 +315,7 @@ function DailyView() {
               <ul className="space-y-2">
                 {rootTasks.map((task) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
+                  const showTaskDeleteError = taskDeleteError?.id === task._id
                   return (
                     <li
                       key={task._id}
@@ -343,18 +361,33 @@ function DailyView() {
                       ) : (
                         <>
                           <span className="flex-1">{task.title}</span>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="h-9 px-4"
-                            onClick={() =>
-                              startTaskEditing(task._id, task.title)
-                            }
-                          >
-                            Rename
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="h-9 px-4"
+                              onClick={() =>
+                                startTaskEditing(task._id, task.title)
+                              }
+                            >
+                              Rename
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              className="h-9 px-4"
+                              onClick={() => handleTaskDelete(task._id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </>
                       )}
+                      {showTaskDeleteError ? (
+                        <p className="w-full text-xs text-rose-300">
+                          {taskDeleteError.message}
+                        </p>
+                      ) : null}
                     </li>
                   )
                 })}
