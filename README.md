@@ -1,4 +1,16 @@
-Welcome to your new TanStack app! 
+Welcome to your new TanStack app!
+
+# Ralph loop (optional)
+
+This repo is set up for a [Ralph loop](https://ghuntley.com/ralph/): an AI agent runs from a plan (PRD), does one task per run, passes feedback loops, commits, and updates progress.
+
+**Setup (Linux):** Install the Cursor Agent CLI (`curl https://cursor.com/install -fsS | bash`), then run `agent` once to sign in. Put your plan in `PRD.md` at the repo root.
+
+**Run:** From the repo root, one iteration (human-in-the-loop): `./ralph-once.sh`. Multiple iterations: `./afk-ralph.sh 20` (20 = max iterations; the loop stops when the PRD is complete).
+
+The agent uses `docs/RALPH.md` and `AGENTS.md` for instructions and feedback loops (typecheck, Convex check, tests, lint). You can run all checks with `pnpm run feedback`.
+
+---
 
 # Getting Started
 

@@ -7,10 +7,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "pnpm run build && wrangler deploy",
-    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "convex:check": "convex codegen",
+    "lint": "eslint .",
     "format": "prettier",
-    "check": "prettier --write . && eslint --fix"
+    "check": "prettier --write . && eslint --fix",
+    "feedback": "pnpm run typecheck && pnpm run convex:check && pnpm run test && pnpm run lint"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.13.8",
