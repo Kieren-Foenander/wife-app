@@ -14,6 +14,8 @@ export default defineSchema({
   tasks: defineTable({
     title: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
+    isCompleted: v.boolean(),
+    lastCompletedDate: v.optional(v.number()),
   }),
   todos: defineTable({
     text: v.string(),

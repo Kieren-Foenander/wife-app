@@ -21,6 +21,19 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('heading', { name: /your tasks/i })).toBeVisible()
   })
 
+  test('task completion toggle works', async ({ page }) => {
+    const taskTitle = `Pay bills ${Date.now()}`
+    await page.goto('/')
+    await page.getByPlaceholder(/pay rent/i).fill(taskTitle)
+    await page.getByRole('button', { name: 'Add task' }).click()
+    await expect(page.getByText(taskTitle)).toBeVisible()
+
+    const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
+    await expect(checkbox).not.toBeChecked()
+    await checkbox.check()
+    await expect(checkbox).toBeChecked()
+  })
+
   test('category link opens detail route', async ({ page }) => {
     const categoryName = `Chores ${Date.now()}`
     const childCategoryName = `Laundry ${Date.now()}`

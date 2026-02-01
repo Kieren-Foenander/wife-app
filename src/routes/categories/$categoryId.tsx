@@ -24,6 +24,7 @@ function CategoryDetail() {
   })
   const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
+  const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const [childCategoryName, setChildCategoryName] = useState('')
   const [childTaskTitle, setChildTaskTitle] = useState('')
 
@@ -55,6 +56,10 @@ function CategoryDetail() {
       parentCategoryId: categoryId as Id<'categories'>,
     })
     setChildTaskTitle('')
+  }
+
+  const handleTaskToggle = async (id: Id<'tasks'>) => {
+    await toggleTaskCompletion({ id })
   }
 
   return (
@@ -217,7 +222,22 @@ function CategoryDetail() {
                     key={task._id}
                     className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
                   >
-                    <span className="flex-1">{task.title}</span>
+                    <label className="flex flex-1 items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+                        checked={task.isCompleted}
+                        onChange={() => handleTaskToggle(task._id)}
+                        aria-label={`Mark ${task.title} complete`}
+                      />
+                      <span
+                        className={`flex-1 ${
+                          task.isCompleted ? 'text-slate-500 line-through' : ''
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                    </label>
                   </li>
                 ))}
               </ul>

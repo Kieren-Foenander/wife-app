@@ -34,6 +34,7 @@ function DailyView() {
   const updateTask = useMutation(api.todos.updateTask)
   const deleteCategory = useMutation(api.todos.deleteCategory)
   const deleteTask = useMutation(api.todos.deleteTask)
+  const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const categories = useQuery(api.todos.listCategories)
   const rootTasks = useQuery(api.todos.listRootTasks)
 
@@ -141,6 +142,10 @@ function DailyView() {
         error instanceof Error ? error.message : 'Unable to delete task.'
       setTaskDeleteError({ id, message })
     }
+  }
+
+  const handleTaskToggle = async (id: Id<'tasks'>) => {
+    await toggleTaskCompletion({ id })
   }
 
   return (
@@ -366,7 +371,24 @@ function DailyView() {
                         </>
                       ) : (
                         <>
-                          <span className="flex-1">{task.title}</span>
+                          <label className="flex flex-1 items-center gap-3">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+                              checked={task.isCompleted}
+                              onChange={() => handleTaskToggle(task._id)}
+                              aria-label={`Mark ${task.title} complete`}
+                            />
+                            <span
+                              className={`flex-1 ${
+                                task.isCompleted
+                                  ? 'text-slate-500 line-through'
+                                  : ''
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                          </label>
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"

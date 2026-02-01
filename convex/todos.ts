@@ -117,6 +117,8 @@ export const createTask = mutation({
     return await ctx.db.insert('tasks', {
       title: args.title,
       parentCategoryId: args.parentCategoryId,
+      isCompleted: false,
+      lastCompletedDate: undefined,
     })
   },
 })
@@ -134,6 +136,21 @@ export const deleteTask = mutation({
   args: { id: v.id('tasks') },
   handler: async (ctx, args) => {
     return await ctx.db.delete(args.id)
+  },
+})
+
+export const toggleTaskCompletion = mutation({
+  args: { id: v.id('tasks') },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.id)
+    if (!task) {
+      throw new Error('Task not found')
+    }
+    const nextCompleted = !task.isCompleted
+    return await ctx.db.patch(args.id, {
+      isCompleted: nextCompleted,
+      lastCompletedDate: nextCompleted ? Date.now() : undefined,
+    })
   },
 })
 
