@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('Daily view smoke', () => {
   test('app loads and shows Daily view', async ({ page }) => {
@@ -19,5 +19,16 @@ test.describe('Daily view smoke', () => {
     await page.goto('/')
     await expect(page.getByRole('heading', { name: /your categories/i })).toBeVisible()
     await expect(page.getByRole('heading', { name: /your tasks/i })).toBeVisible()
+  })
+
+  test('category link opens detail route', async ({ page }) => {
+    const categoryName = `Chores ${Date.now()}`
+    await page.goto('/')
+    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await page.getByRole('button', { name: 'Create' }).click()
+    await expect(page.getByRole('link', { name: categoryName })).toBeVisible()
+    await page.getByRole('link', { name: categoryName }).click()
+    await expect(page.getByRole('heading', { name: categoryName })).toBeVisible()
+    await expect(page.getByText('Category')).toBeVisible()
   })
 })

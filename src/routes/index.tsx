@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
 import { Button } from '../components/ui/button'
@@ -266,7 +266,13 @@ function DailyView() {
                         </>
                       ) : (
                         <>
-                          <span className="flex-1">{category.name}</span>
+                          <Link
+                            to="/categories/$categoryId"
+                            params={{ categoryId: category._id }}
+                            className="flex-1 text-left text-slate-100 hover:text-slate-200"
+                          >
+                            {category.name}
+                          </Link>
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"

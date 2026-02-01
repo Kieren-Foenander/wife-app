@@ -8,6 +8,13 @@ export const listCategories = query({
   },
 })
 
+export const getCategory = query({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id)
+  },
+})
+
 export const createCategory = mutation({
   args: { name: v.string(), parentCategoryId: v.optional(v.id('categories')) },
   handler: async (ctx, args) => {

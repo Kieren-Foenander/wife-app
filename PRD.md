@@ -34,7 +34,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 ## Phase 2: Hierarchy (infinite nesting) + navigation
 
 - [x] Category parent/child fields: Add parentCategoryId to category and task tables; update create mutations
-- [ ] Category detail route: Route screen for a category with list of children
+- [x] Category detail route: Route screen for a category with list of children
 - [ ] Child listing: Query children (subcategories + tasks) for a category
 - [ ] Breadcrumbs: Query ancestors and render breadcrumb navigation
 - [ ] Context-aware creation: Creation drawer auto-sets parent when on category detail
