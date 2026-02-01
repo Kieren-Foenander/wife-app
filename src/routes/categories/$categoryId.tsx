@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
+import { Folder, ListTodo } from 'lucide-react'
 
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../../components/CreationDrawer'
@@ -204,7 +205,8 @@ function CategoryDetail() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+            <Folder className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
             Child categories
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
@@ -221,6 +223,7 @@ function CategoryDetail() {
                     key={child._id}
                     className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
                   >
+                    <Folder className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                     <Link
                       to="/categories/$categoryId"
                       params={{ categoryId: child._id }}
@@ -237,7 +240,10 @@ function CategoryDetail() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">Child tasks</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+            <ListTodo className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
+            Child tasks
+          </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {children === undefined ? (
               <p className="text-sm text-slate-500">Loading tasks...</p>
@@ -253,8 +259,9 @@ function CategoryDetail() {
                   return (
                     <li
                       key={task._id}
-                      className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                      className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
                     >
+                      <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                       <label className="flex flex-1 items-center gap-3">
                         <input
                           type="checkbox"

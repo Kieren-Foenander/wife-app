@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from 'convex/react'
+import { Folder, ListTodo } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 import { Button } from './ui/button'
 import {
@@ -137,12 +138,13 @@ export function CreationDrawer({
               role="tab"
               aria-selected={mode === 'category'}
               onClick={() => setMode('category')}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 mode === 'category'
                   ? 'bg-slate-700 text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              <Folder className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
               New Category
             </button>
             <button
@@ -150,12 +152,13 @@ export function CreationDrawer({
               role="tab"
               aria-selected={mode === 'task'}
               onClick={() => setMode('task')}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 mode === 'task'
                   ? 'bg-slate-700 text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              <ListTodo className="size-4 shrink-0" strokeWidth={1.5} aria-hidden />
               New Task
             </button>
           </div>

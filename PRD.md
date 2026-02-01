@@ -77,7 +77,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 
 - [x] Pastel theme tokens: Add color palette in src/styles.css
 - [x] Typography: Apply friendly rounded font globally
-- [ ] Iconography: Add soft-edged icons for categories/tasks
+- [x] Iconography: Add soft-edged icons for categories/tasks
 - [ ] Micro-interactions: Completion animation (e.g. subtle bounce/confetti)
 
 ## Phase 8: UX details + quality

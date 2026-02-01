@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
+import { Folder, ListTodo } from 'lucide-react'
 
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../components/CreationDrawer'
@@ -385,7 +386,8 @@ function DailyView() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+            <Folder className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
             Your categories
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
@@ -442,6 +444,7 @@ function DailyView() {
                         </>
                       ) : (
                         <>
+                          <Folder className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                           <div className="flex min-w-0 flex-1 flex-col gap-2">
                             <Link
                               to="/categories/$categoryId"
@@ -490,7 +493,8 @@ function DailyView() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+            <ListTodo className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
             {view === 'day'
               ? 'Your tasks'
               : view === 'week'
@@ -557,6 +561,7 @@ function DailyView() {
                         </>
                       ) : (
                         <>
+                          <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                           <label className="flex flex-1 items-center gap-3">
                             <input
                               type="checkbox"
