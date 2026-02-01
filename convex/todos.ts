@@ -60,6 +60,53 @@ export const listCategoryChildren = query({
   },
 })
 
+export const getCategoryCompletion = query({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    const rootCategory = await ctx.db.get(args.id)
+    if (!rootCategory) {
+      return null
+    }
+
+    const visited = new Set<string>()
+    const queue = [rootCategory._id]
+    const categoryIds: Array<string> = []
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()
+      if (!currentId || visited.has(currentId)) {
+        continue
+      }
+      visited.add(currentId)
+      categoryIds.push(currentId)
+
+      const children = await ctx.db
+        .query('categories')
+        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .collect()
+      for (const child of children) {
+        if (!visited.has(child._id)) {
+          queue.push(child._id)
+        }
+      }
+    }
+
+    let total = 0
+    let completed = 0
+
+    for (const categoryId of categoryIds) {
+      const tasks = await ctx.db
+        .query('tasks')
+        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .collect()
+      total += tasks.length
+      completed += tasks.filter((task) => task.isCompleted).length
+    }
+
+    return { total, completed }
+  },
+})
+
 export const createCategory = mutation({
   args: { name: v.string(), parentCategoryId: v.optional(v.id('categories')) },
   handler: async (ctx, args) => {

@@ -43,7 +43,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 ## Phase 3: Completion behavior + aggregation
 
 - [x] Task completion: Add isCompleted and lastCompletedDate; checkbox toggles
-- [ ] Category completion computed: Query total descendant tasks and completed count (x/y done)
+- [x] Category completion computed: Query total descendant tasks and completed count (x/y done)
 - [ ] Partial state indicator: UI shows partial completion for categories
 - [ ] Auto-completion: Category shows completed when all descendant tasks completed
 - [ ] Bulk complete category: Mutation to recursively complete all descendant tasks
