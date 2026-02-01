@@ -23,6 +23,17 @@ function CategoryDetail() {
   const children = useQuery(api.todos.listCategoryChildren, {
     id: categoryId as Id<'categories'>,
   })
+  const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
+    Record<string, boolean>
+  >({})
+  const completionOverride = children
+    ? {
+        total: children.tasks.length,
+        completed: children.tasks.filter(
+          (task) => taskCompletionOverrides[task._id] ?? task.isCompleted,
+        ).length,
+      }
+    : undefined
   const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
@@ -59,7 +70,14 @@ function CategoryDetail() {
     setChildTaskTitle('')
   }
 
-  const handleTaskToggle = async (id: Id<'tasks'>) => {
+  const handleTaskToggle = async (
+    id: Id<'tasks'>,
+    currentCompleted: boolean,
+  ) => {
+    setTaskCompletionOverrides((prev) => ({
+      ...prev,
+      [id]: !currentCompleted,
+    }))
     await toggleTaskCompletion({ id })
   }
 
@@ -105,9 +123,15 @@ function CategoryDetail() {
               Loading...
             </h1>
           ) : category ? (
-            <h1 className="text-3xl font-semibold text-slate-100">
-              {category.name}
-            </h1>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold text-slate-100">
+                {category.name}
+              </h1>
+              <CategoryCompletionIndicator
+                categoryId={category._id}
+                completionOverride={completionOverride}
+              />
+            </div>
           ) : (
             <h1 className="text-3xl font-semibold text-rose-200">
               Category not found
@@ -219,29 +243,35 @@ function CategoryDetail() {
               </p>
             ) : (
               <ul className="space-y-2">
-                {children.tasks.map((task) => (
-                  <li
-                    key={task._id}
-                    className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
-                  >
-                    <label className="flex flex-1 items-center gap-3">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
-                        checked={task.isCompleted}
-                        onChange={() => handleTaskToggle(task._id)}
-                        aria-label={`Mark ${task.title} complete`}
-                      />
-                      <span
-                        className={`flex-1 ${
-                          task.isCompleted ? 'text-slate-500 line-through' : ''
-                        }`}
-                      >
-                        {task.title}
-                      </span>
-                    </label>
-                  </li>
-                ))}
+                {children.tasks.map((task) => {
+                  const isCompleted =
+                    taskCompletionOverrides[task._id] ?? task.isCompleted
+                  return (
+                    <li
+                      key={task._id}
+                      className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                    >
+                      <label className="flex flex-1 items-center gap-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+                          checked={isCompleted}
+                          onChange={() =>
+                            handleTaskToggle(task._id, isCompleted)
+                          }
+                          aria-label={`Mark ${task.title} complete`}
+                        />
+                        <span
+                          className={`flex-1 ${
+                            isCompleted ? 'text-slate-500 line-through' : ''
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+                      </label>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>

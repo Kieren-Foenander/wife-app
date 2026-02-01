@@ -56,7 +56,42 @@ export const listCategoryChildren = query({
         .collect(),
     ])
 
-    return { categories, tasks }
+    const visited = new Set<string>()
+    const queue = [args.id]
+    const categoryIds: Array<string> = []
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()
+      if (!currentId || visited.has(currentId)) {
+        continue
+      }
+      visited.add(currentId)
+      categoryIds.push(currentId)
+
+      const children = await ctx.db
+        .query('categories')
+        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .collect()
+      for (const child of children) {
+        if (!visited.has(child._id)) {
+          queue.push(child._id)
+        }
+      }
+    }
+
+    let total = 0
+    let completed = 0
+
+    for (const categoryId of categoryIds) {
+      const descendantTasks = await ctx.db
+        .query('tasks')
+        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .collect()
+      total += descendantTasks.length
+      completed += descendantTasks.filter((task) => task.isCompleted).length
+    }
+
+    return { categories, tasks, completion: { total, completed } }
   },
 })
 
