@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
+import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { Button } from '../components/ui/button'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -271,13 +272,18 @@ function DailyView() {
                         </>
                       ) : (
                         <>
-                          <Link
-                            to="/categories/$categoryId"
-                            params={{ categoryId: category._id }}
-                            className="flex-1 text-left text-slate-100 hover:text-slate-200"
-                          >
-                            {category.name}
-                          </Link>
+                          <div className="flex min-w-0 flex-1 flex-col gap-2">
+                            <Link
+                              to="/categories/$categoryId"
+                              params={{ categoryId: category._id }}
+                              className="truncate text-left text-slate-100 hover:text-slate-200"
+                            >
+                              {category.name}
+                            </Link>
+                            <CategoryCompletionIndicator
+                              categoryId={category._id}
+                            />
+                          </div>
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
+import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { Button } from '../../components/ui/button'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -190,7 +191,7 @@ function CategoryDetail() {
                 {children.categories.map((child) => (
                   <li
                     key={child._id}
-                    className="flex items-center rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
                   >
                     <Link
                       to="/categories/$categoryId"
@@ -199,6 +200,7 @@ function CategoryDetail() {
                     >
                       {child.name}
                     </Link>
+                    <CategoryCompletionIndicator categoryId={child._id} />
                   </li>
                 ))}
               </ul>

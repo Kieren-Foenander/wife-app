@@ -34,6 +34,33 @@ test.describe('Daily view smoke', () => {
     await expect(checkbox).toBeChecked()
   })
 
+  test('category shows partial completion indicator', async ({ page }) => {
+    const categoryName = `Projects ${Date.now()}`
+    const taskOne = `Draft plan ${Date.now()}`
+    const taskTwo = `Review notes ${Date.now()}`
+
+    await page.goto('/')
+    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await page.getByRole('button', { name: 'Create' }).click()
+    await page.getByRole('link', { name: categoryName }).click()
+
+    const childTaskForm = page
+      .getByRole('heading', { name: /add a child task/i })
+      .locator('..')
+    await childTaskForm.getByPlaceholder(/vacuum, wipe counters/i).fill(taskOne)
+    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await childTaskForm.getByPlaceholder(/vacuum, wipe counters/i).fill(taskTwo)
+    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+
+    await page.getByRole('link', { name: 'Back to Daily' }).click()
+
+    const categoryRow = page.locator('li', {
+      has: page.getByRole('link', { name: categoryName }),
+    })
+    await expect(categoryRow.getByText('0/2 done')).toBeVisible()
+    await expect(categoryRow.getByText('Partial')).toBeVisible()
+  })
+
   test('category link opens detail route', async ({ page }) => {
     const categoryName = `Chores ${Date.now()}`
     const childCategoryName = `Laundry ${Date.now()}`
