@@ -62,7 +62,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] View mode state: Day/Week/Month toggle UI
 - [x] Daily header: Show "Today - [Day Name]"
 - [x] Weekly view UI: Render week strip with days
-- [ ] Monthly view UI: Render calendar grid
+- [x] Monthly view UI: Render calendar grid
 - [ ] View-specific data: Hook data loaders to each view (Daily due; Week/Month relevant tasks)
 
 ## Phase 6: Creation drawer UX

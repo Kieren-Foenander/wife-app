@@ -33,6 +33,32 @@ function isSameDay(a: Date, b: Date): boolean {
   )
 }
 
+/** Current month as 6 weeks × 7 days (Sun–Sat). Cells are Date or null (other month). */
+function getCurrentMonthGrid(): Array<Array<Date | null>> {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const first = new Date(year, month, 1)
+  const firstDay = first.getDay()
+  const startOffset = firstDay
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const grid: Array<Array<Date | null>> = []
+  let dayIndex = 1 - startOffset
+  for (let row = 0; row < 6; row++) {
+    const week: Array<Date | null> = []
+    for (let col = 0; col < 7; col++) {
+      if (dayIndex < 1 || dayIndex > daysInMonth) {
+        week.push(null)
+      } else {
+        week.push(new Date(year, month, dayIndex))
+      }
+      dayIndex++
+    }
+    grid.push(week)
+  }
+  return grid
+}
+
 function WeekStrip() {
   const weekDates = useMemo(getCurrentWeekDates, [])
   const today = useMemo(() => new Date(), [])
@@ -63,6 +89,62 @@ function WeekStrip() {
               </span>
               {isToday ? (
                 <span className="rounded bg-slate-600 px-2 py-0.5 text-xs font-medium text-slate-200">
+                  Today
+                </span>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function MonthGrid() {
+  const grid = useMemo(getCurrentMonthGrid, [])
+  const today = useMemo(() => new Date(), [])
+
+  return (
+    <section
+      role="region"
+      aria-label="Month"
+      className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+    >
+      <div className="grid min-w-0 grid-cols-7 gap-1">
+        {WEEKDAY_LABELS.map((label) => (
+          <div
+            key={label}
+            className="py-2 text-center text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
+            {label}
+          </div>
+        ))}
+        {grid.flat().map((d, i) => {
+          if (d === null) {
+            return (
+              <div
+                key={`empty-${i}`}
+                className="aspect-square rounded-lg border border-slate-800/60 bg-slate-950/40 p-1 text-slate-600"
+              />
+            )
+          }
+          const isToday = isSameDay(d, today)
+          return (
+            <div
+              key={d.toISOString()}
+              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 ${
+                isToday
+                  ? 'border-slate-500 bg-slate-700/80 text-slate-100'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-300'
+              }`}
+            >
+              <span className="text-sm font-medium tabular-nums">
+                {d.getDate()}
+              </span>
+              {isToday ? (
+                <span className="rounded bg-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-slate-200">
                   Today
                 </span>
               ) : null}
@@ -268,6 +350,8 @@ function DailyView() {
 
         {view === 'week' ? (
           <WeekStrip />
+        ) : view === 'month' ? (
+          <MonthGrid />
         ) : null}
 
         <form

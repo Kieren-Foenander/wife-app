@@ -22,6 +22,7 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('tab', { name: 'Month' }).click()
     await expect(page.getByRole('tab', { name: 'Month', selected: true })).toBeVisible()
     await expect(page.getByText('Monthly')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Month' })).toBeVisible()
     await page.getByRole('tab', { name: 'Day' }).click()
     await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
     await expect(page.getByText(/Today - \w+/)).toBeVisible()
