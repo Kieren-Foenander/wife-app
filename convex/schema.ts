@@ -4,6 +4,7 @@ import { v } from 'convex/values'
 export default defineSchema({
   categories: defineTable({
     name: v.string(),
+    parentCategoryId: v.optional(v.id('categories')),
   }),
   products: defineTable({
     title: v.string(),
@@ -12,7 +13,7 @@ export default defineSchema({
   }),
   tasks: defineTable({
     title: v.string(),
-    categoryId: v.optional(v.id('categories')),
+    parentCategoryId: v.optional(v.id('categories')),
   }),
   todos: defineTable({
     text: v.string(),

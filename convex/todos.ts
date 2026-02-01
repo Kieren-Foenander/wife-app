@@ -9,10 +9,11 @@ export const listCategories = query({
 })
 
 export const createCategory = mutation({
-  args: { name: v.string() },
+  args: { name: v.string(), parentCategoryId: v.optional(v.id('categories')) },
   handler: async (ctx, args) => {
     return await ctx.db.insert('categories', {
       name: args.name,
+      parentCategoryId: args.parentCategoryId,
     })
   },
 })
@@ -31,7 +32,7 @@ export const deleteCategory = mutation({
   handler: async (ctx, args) => {
     const hasTasks = await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('categoryId'), args.id))
+      .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
       .first()
     if (hasTasks) {
       throw new Error('Category has tasks. Remove them before deleting.')
@@ -52,17 +53,18 @@ export const listRootTasks = query({
   handler: async (ctx) => {
     return await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('categoryId'), undefined))
+      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
       .order('desc')
       .collect()
   },
 })
 
 export const createTask = mutation({
-  args: { title: v.string() },
+  args: { title: v.string(), parentCategoryId: v.optional(v.id('categories')) },
   handler: async (ctx, args) => {
     return await ctx.db.insert('tasks', {
       title: args.title,
+      parentCategoryId: args.parentCategoryId,
     })
   },
 })

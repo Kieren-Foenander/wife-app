@@ -27,7 +27,7 @@ Format: markdown checklists. One task per iteration; run feedback loops, then UI
 
 ## Phase 2: Hierarchy (infinite nesting) + navigation
 
-- [ ] Category parent/child fields: Add parentCategoryId to category and task tables; update create mutations
+- [x] Category parent/child fields: Add parentCategoryId to category and task tables; update create mutations
 - [ ] Category detail route: Route screen for a category with list of children
 - [ ] Child listing: Query children (subcategories + tasks) for a category
 - [ ] Breadcrumbs: Query ancestors and render breadcrumb navigation
