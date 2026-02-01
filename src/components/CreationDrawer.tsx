@@ -11,6 +11,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from './ui/drawer'
+import { Spinner } from './ui/spinner'
 import type { Id } from '../../convex/_generated/dataModel'
 
 type DrawerMode = 'category' | 'task'
@@ -185,9 +186,12 @@ export function CreationDrawer({
               <div>
                 <label
                   htmlFor="category-parent"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
                 >
                   Parent category
+                  {categoriesForPicker === undefined ? (
+                    <Spinner aria-label="Loading categories" size={14} />
+                  ) : null}
                 </label>
                 <select
                   id="category-parent"
@@ -197,10 +201,14 @@ export function CreationDrawer({
                       e.target.value ? (e.target.value as Id<'categories'>) : '',
                     )
                   }
-                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  disabled={categoriesForPicker === undefined}
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none disabled:opacity-70"
                   aria-label="Parent category"
+                  aria-busy={categoriesForPicker === undefined}
                 >
-                  <option value="">None (root)</option>
+                  <option value="">
+                    {categoriesForPicker === undefined ? 'Loading...' : 'None (root)'}
+                  </option>
                   {categoriesForPicker?.map((c) => (
                     <option key={c._id} value={c._id}>
                       {'\u00A0'.repeat(c.depth * 2)}{c.depth > 0 ? '— ' : ''}{c.name}
@@ -256,9 +264,12 @@ export function CreationDrawer({
               <div>
                 <label
                   htmlFor="task-parent"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
                 >
                   Parent category
+                  {categoriesForPicker === undefined ? (
+                    <Spinner aria-label="Loading categories" size={14} />
+                  ) : null}
                 </label>
                 <select
                   id="task-parent"
@@ -268,10 +279,14 @@ export function CreationDrawer({
                       e.target.value ? (e.target.value as Id<'categories'>) : '',
                     )
                   }
-                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  disabled={categoriesForPicker === undefined}
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none disabled:opacity-70"
                   aria-label="Parent category"
+                  aria-busy={categoriesForPicker === undefined}
                 >
-                  <option value="">None (root)</option>
+                  <option value="">
+                    {categoriesForPicker === undefined ? 'Loading...' : 'None (root)'}
+                  </option>
                   {categoriesForPicker?.map((c) => (
                     <option key={c._id} value={c._id}>
                       {'\u00A0'.repeat(c.depth * 2)}{c.depth > 0 ? '— ' : ''}{c.name}

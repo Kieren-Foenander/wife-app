@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { CategoryCompletionIndicator } from '../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../components/CreationDrawer'
 import { Button } from '../components/ui/button'
+import { ListRowSkeleton } from '../components/ui/skeleton'
+import { Spinner } from '../components/ui/spinner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -420,7 +422,15 @@ function DailyView() {
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {categories === undefined ? (
-              <p className="text-sm text-slate-500">Loading categories...</p>
+              <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading categories">
+                <Spinner aria-label="Loading categories" size={24} />
+                <p className="text-sm text-slate-500">Loading categories...</p>
+                <ul className="w-full space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <ListRowSkeleton key={i} />
+                  ))}
+                </ul>
+              </div>
             ) : categories.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No categories">
                 <FolderOpen className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
@@ -531,7 +541,15 @@ function DailyView() {
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {rootTasks === undefined ? (
-              <p className="text-sm text-slate-500">Loading tasks...</p>
+              <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading tasks">
+                <Spinner aria-label="Loading tasks" size={24} />
+                <p className="text-sm text-slate-500">Loading tasks...</p>
+                <ul className="w-full space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <ListRowSkeleton key={i} />
+                  ))}
+                </ul>
+              </div>
             ) : rootTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
                 <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />

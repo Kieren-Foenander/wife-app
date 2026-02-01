@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../../components/CreationDrawer'
 import { Button } from '../../components/ui/button'
+import { ListRowSkeleton } from '../../components/ui/skeleton'
+import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 
@@ -156,9 +158,10 @@ function CategoryDetail() {
             <Link to="/" search={{ view: 'day' }}>Back to Daily</Link>
           </Button>
           {ancestors === undefined || category === undefined ? (
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-600">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-600" role="status" aria-label="Loading path">
+              <Spinner aria-label="Loading path" size={14} />
               Loading path...
-            </p>
+            </div>
           ) : (
             <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
               <Link to="/" search={{ view: 'day' }} className="hover:text-slate-200">
@@ -186,9 +189,10 @@ function CategoryDetail() {
             Category
           </p>
           {category === undefined ? (
-            <h1 className="text-3xl font-semibold text-slate-100">
+            <div className="flex items-center gap-2 text-3xl font-semibold text-slate-100" role="status" aria-label="Loading category">
+              <Spinner aria-label="Loading category" size={28} />
               Loading...
-            </h1>
+            </div>
           ) : category ? (
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold text-slate-100">
@@ -240,7 +244,15 @@ function CategoryDetail() {
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {children === undefined ? (
-              <p className="text-sm text-slate-500">Loading categories...</p>
+              <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading child categories">
+                <Spinner aria-label="Loading child categories" size={24} />
+                <p className="text-sm text-slate-500">Loading categories...</p>
+                <ul className="w-full space-y-2">
+                  {[1, 2].map((i) => (
+                    <ListRowSkeleton key={i} />
+                  ))}
+                </ul>
+              </div>
             ) : children.categories.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No subcategories">
                 <FolderOpen className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
@@ -279,7 +291,15 @@ function CategoryDetail() {
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {children === undefined ? (
-              <p className="text-sm text-slate-500">Loading tasks...</p>
+              <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading child tasks">
+                <Spinner aria-label="Loading child tasks" size={24} />
+                <p className="text-sm text-slate-500">Loading tasks...</p>
+                <ul className="w-full space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <ListRowSkeleton key={i} />
+                  ))}
+                </ul>
+              </div>
             ) : children.tasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
                 <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
