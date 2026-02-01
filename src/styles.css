@@ -60,7 +60,7 @@ code {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Pastel palette – category colors and accents */
+/* Pastel palette – soft accent colors */
 :root {
   --pastel-rose: oklch(0.91 0.06 15);
   --pastel-peach: oklch(0.92 0.08 55);

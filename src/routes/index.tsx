@@ -115,10 +115,10 @@ function WeekStrip({
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
               className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${isSelected
-                  ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
-                  : isToday
-                    ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
+                ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                : isToday
+                  ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -206,10 +206,10 @@ function MonthGrid({
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
               className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
-                  ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
-                  : isToday
-                    ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
+                ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                : isToday
+                  ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
                 month: 'short',
@@ -238,6 +238,7 @@ function TaskRow({
   editingTaskId,
   draftTitle,
   setDraftTitle,
+  isCompleted,
   celebratingTaskId,
   startEditing,
   saveEditing,
@@ -249,6 +250,7 @@ function TaskRow({
   editingTaskId: Id<'tasks'> | null
   draftTitle: string
   setDraftTitle: (value: string) => void
+  isCompleted: boolean
   celebratingTaskId: Id<'tasks'> | null
   startEditing: (id: Id<'tasks'>, currentTitle: string) => void
   saveEditing: (id: Id<'tasks'>, currentTitle: string) => void
@@ -256,9 +258,6 @@ function TaskRow({
   handleDelete: (id: Id<'tasks'>) => void
   handleComplete: (id: Id<'tasks'>, currentCompleted: boolean) => void
 }) {
-  const isCompleted =
-    useQuery(api.todos.hasCompletedTasks, { taskId: task._id }) ?? false
-
   return (
     <li
       className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
@@ -374,6 +373,9 @@ function DailyView() {
   const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
     {},
   )
+  const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
+    Record<string, boolean>
+  >({})
   const [celebratingTaskId, setCelebratingTaskId] =
     useState<Id<'tasks'> | null>(null)
   const createTask = useMutation(api.todos.createTask)
@@ -480,6 +482,7 @@ function DailyView() {
       setCelebratingTaskId(id)
       setTimeout(() => setCelebratingTaskId(null), 500)
     }
+    setTaskCompletionOverrides((prev) => ({ ...prev, [id]: true }))
     try {
       await completeTaskAndSubtasks({ taskId: id })
     } catch (error) {
@@ -506,8 +509,8 @@ function DailyView() {
                 aria-selected={view === mode}
                 onClick={() => navigate({ search: { view: mode } })}
                 className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${view === mode
-                    ? 'bg-slate-700 text-slate-100'
-                    : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-700 text-slate-100'
+                  : 'text-slate-400 hover:text-slate-200'
                   }`}
               >
                 {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
@@ -621,6 +624,7 @@ function DailyView() {
               <ul className="space-y-2">
                 {rootTasks.map((task) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
+                  const isCompleted = taskCompletionOverrides[task._id] ?? false
                   return (
                     <TaskRow
                       key={task._id}
@@ -633,6 +637,7 @@ function DailyView() {
                           [task._id]: value,
                         }))
                       }
+                      isCompleted={isCompleted}
                       celebratingTaskId={celebratingTaskId}
                       startEditing={startTaskEditing}
                       saveEditing={saveTaskEditing}

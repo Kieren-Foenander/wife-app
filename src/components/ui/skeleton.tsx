@@ -14,7 +14,7 @@ export function Skeleton({ className }: SkeletonProps) {
   )
 }
 
-/** Skeleton row matching category/task list item height */
+/** Skeleton row matching task list item height */
 export function ListRowSkeleton({ className }: SkeletonProps) {
   return (
     <div

@@ -3,45 +3,19 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
-type CategoryCompletionIndicatorProps = {
-  categoryId: Id<'categories'>
+type TaskCompletionIndicatorProps = {
+  taskId: Id<'tasks'>
   completionOverride?: { total: number; completed: number }
 }
 
-export function CategoryCompletionIndicator({
-  categoryId,
+export function TaskCompletionIndicator({
+  taskId,
   completionOverride,
-}: CategoryCompletionIndicatorProps) {
-  const children = useQuery(api.todos.listCategoryChildren, { id: categoryId })
+}: TaskCompletionIndicatorProps) {
+  const completionFromQuery = useQuery(api.todos.getTaskCompletion, { taskId })
+  const completion = completionOverride ?? completionFromQuery
 
-  if (!children && !completionOverride) {
-    return null
-  }
-
-  const completionFromQuery = children
-    ? (children as { completion?: { total: number; completed: number } })
-        .completion
-    : undefined
-  const directCompletion = children
-    ? {
-        total: children.tasks.length,
-        completed: children.tasks.filter((task) => task.isCompleted).length,
-      }
-    : undefined
-  const completion = completionOverride
-    ? completionOverride
-    : completionFromQuery && directCompletion
-      ? completionFromQuery.total >= directCompletion.total &&
-        completionFromQuery.completed >= directCompletion.completed
-        ? completionFromQuery
-        : directCompletion
-      : completionFromQuery ?? directCompletion
-
-  if (!completion) {
-    return null
-  }
-
-  if (completion.total === 0) {
+  if (!completion || completion.total === 0) {
     return null
   }
 
@@ -53,7 +27,7 @@ export function CategoryCompletionIndicator({
   return (
     <div
       className="flex items-center gap-3 text-xs text-slate-400"
-      data-testid="category-completion"
+      data-testid="task-completion"
       role="progressbar"
       aria-valuenow={progress}
       aria-valuemin={0}
