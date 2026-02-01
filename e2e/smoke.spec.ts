@@ -43,7 +43,13 @@ test.describe('Daily view smoke', () => {
     await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
-    await page.getByRole('link', { name: categoryName }).click()
+    const categoryLink = page.getByRole('link', { name: categoryName })
+    await expect(categoryLink).toBeVisible()
+    await categoryLink.click()
+    await page.waitForURL(/\/categories\//)
+    await expect(
+      page.getByRole('heading', { name: categoryName }),
+    ).toBeVisible({ timeout: 15000 })
 
     const childTaskForm = page
       .getByRole('heading', { name: /add a child task/i })
@@ -52,6 +58,8 @@ test.describe('Daily view smoke', () => {
     await childTaskForm.getByRole('button', { name: 'Add task' }).click()
     await childTaskForm.getByPlaceholder(/vacuum, wipe counters/i).fill(taskTwo)
     await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await expect(page.getByText(taskOne)).toBeVisible()
+    await expect(page.getByText(taskTwo)).toBeVisible()
 
     await page.getByRole('link', { name: 'Back to Daily' }).click()
 
@@ -64,6 +72,8 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('link', { name: categoryName }).click()
     const taskOneCheckbox = page.getByLabel(`Mark ${taskOne} complete`)
     const taskTwoCheckbox = page.getByLabel(`Mark ${taskTwo} complete`)
+    await expect(taskOneCheckbox).toBeVisible()
+    await expect(taskTwoCheckbox).toBeVisible()
     await taskOneCheckbox.check()
     await expect(taskOneCheckbox).toBeChecked()
     await taskTwoCheckbox.check()
@@ -78,6 +88,48 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('link', { name: 'Back to Daily' }).click()
   })
 
+  test('bulk complete marks descendant tasks complete', async ({ page }) => {
+    const categoryName = `Bulk ${Date.now()}`
+    const taskA = `Task A ${Date.now()}`
+    const taskB = `Task B ${Date.now()}`
+
+    await page.goto('/')
+    await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
+    await page.getByRole('button', { name: 'Create' }).click()
+    const categoryLink = page.getByRole('link', { name: categoryName })
+    await expect(categoryLink).toBeVisible()
+    await categoryLink.click()
+    await page.waitForURL(/\/categories\//)
+    await expect(
+      page.getByRole('heading', { name: categoryName }),
+    ).toBeVisible({ timeout: 15000 })
+
+    const childTaskForm = page
+      .getByRole('heading', { name: /add a child task/i })
+      .locator('..')
+    await childTaskForm
+      .getByPlaceholder(/vacuum, wipe counters/i)
+      .fill(taskA)
+    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await childTaskForm
+      .getByPlaceholder(/vacuum, wipe counters/i)
+      .fill(taskB)
+    await childTaskForm.getByRole('button', { name: 'Add task' }).click()
+    await expect(page.getByText(taskA)).toBeVisible()
+    await expect(page.getByText(taskB)).toBeVisible()
+
+    const bulkCompleteButton = page.getByRole('button', {
+      name: 'Complete all tasks',
+    })
+    await expect(bulkCompleteButton).toBeVisible({ timeout: 15000 })
+    await expect(bulkCompleteButton).toBeEnabled()
+    await bulkCompleteButton.click()
+    await expect(page.getByLabel(`Mark ${taskA} complete`)).toBeChecked()
+    await expect(page.getByLabel(`Mark ${taskB} complete`)).toBeChecked({
+      timeout: 10000,
+    })
+  })
+
   test('category link opens detail route', async ({ page }) => {
     const categoryName = `Chores ${Date.now()}`
     const childCategoryName = `Laundry ${Date.now()}`
@@ -86,9 +138,13 @@ test.describe('Daily view smoke', () => {
     await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
-    await expect(page.getByRole('link', { name: categoryName })).toBeVisible()
-    await page.getByRole('link', { name: categoryName }).click()
-    await expect(page.getByRole('heading', { name: categoryName })).toBeVisible()
+    const categoryNavLink = page.getByRole('link', { name: categoryName })
+    await expect(categoryNavLink).toBeVisible()
+    await categoryNavLink.click()
+    await page.waitForURL(/\/categories\//)
+    await expect(
+      page.getByRole('heading', { name: categoryName }),
+    ).toBeVisible({ timeout: 15000 })
     await expect(page.getByText('Category', { exact: true })).toBeVisible()
     const breadcrumb = page.locator('nav', { hasText: 'Daily' })
     await expect(breadcrumb.getByRole('link', { name: 'Daily' })).toBeVisible()
@@ -130,11 +186,15 @@ test.describe('Daily view smoke', () => {
     await page.getByPlaceholder(/laundry, groceries/i).fill(rootCategoryName)
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
-    await expect(page.getByRole('link', { name: rootCategoryName })).toBeVisible()
-    await page.getByRole('link', { name: rootCategoryName }).click()
+    const rootCategoryNavLink = page.getByRole('link', {
+      name: rootCategoryName,
+    })
+    await expect(rootCategoryNavLink).toBeVisible()
+    await rootCategoryNavLink.click()
+    await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: rootCategoryName }),
-    ).toBeVisible()
+    ).toBeVisible({ timeout: 15000 })
 
     const childCategoryForm = page
       .getByRole('heading', { name: /add a child category/i })
@@ -143,10 +203,12 @@ test.describe('Daily view smoke', () => {
       .getByPlaceholder(/cleaning, errands/i)
       .fill(childCategoryName)
     await childCategoryForm.getByRole('button', { name: 'Create' }).click()
-    await expect(
-      page.getByRole('link', { name: childCategoryName }),
-    ).toBeVisible()
-    await page.getByRole('link', { name: childCategoryName }).click()
+    const childCategoryNavLink = page.getByRole('link', {
+      name: childCategoryName,
+    })
+    await expect(childCategoryNavLink).toBeVisible()
+    await childCategoryNavLink.click()
+    await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: childCategoryName }),
     ).toBeVisible()
@@ -158,10 +220,12 @@ test.describe('Daily view smoke', () => {
       .getByPlaceholder(/cleaning, errands/i)
       .fill(grandchildCategoryName)
     await grandchildCategoryForm.getByRole('button', { name: 'Create' }).click()
-    await expect(
-      page.getByRole('link', { name: grandchildCategoryName }),
-    ).toBeVisible()
-    await page.getByRole('link', { name: grandchildCategoryName }).click()
+    const grandchildCategoryNavLink = page.getByRole('link', {
+      name: grandchildCategoryName,
+    })
+    await expect(grandchildCategoryNavLink).toBeVisible()
+    await grandchildCategoryNavLink.click()
+    await page.waitForURL(/\/categories\//)
     await expect(
       page.getByRole('heading', { name: grandchildCategoryName }),
     ).toBeVisible()

@@ -34,11 +34,31 @@ function CategoryDetail() {
         ).length,
       }
     : undefined
+  const directCompletion = children
+    ? {
+        total: children.tasks.length,
+        completed: children.tasks.filter((task) => task.isCompleted).length,
+      }
+    : undefined
+  const completionFromQuery = children?.completion
+  const effectiveCompletion =
+    completionFromQuery && directCompletion
+      ? completionFromQuery.total >= directCompletion.total &&
+        completionFromQuery.completed >= directCompletion.completed
+        ? completionFromQuery
+        : directCompletion
+      : completionFromQuery ?? directCompletion
   const createCategory = useMutation(api.todos.createCategory)
   const createTask = useMutation(api.todos.createTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
+  const bulkCompleteCategory = useMutation(api.todos.bulkCompleteCategory)
   const [childCategoryName, setChildCategoryName] = useState('')
   const [childTaskTitle, setChildTaskTitle] = useState('')
+  const [isBulkCompleting, setIsBulkCompleting] = useState(false)
+  const hasDescendantTasks = Boolean(effectiveCompletion?.total)
+  const hasIncompleteDescendants = effectiveCompletion
+    ? effectiveCompletion.completed < effectiveCompletion.total
+    : false
 
   const handleChildCategorySubmit = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -79,6 +99,25 @@ function CategoryDetail() {
       [id]: !currentCompleted,
     }))
     await toggleTaskCompletion({ id })
+  }
+
+  const handleBulkComplete = async () => {
+    if (!children || !hasIncompleteDescendants) {
+      return
+    }
+    setIsBulkCompleting(true)
+    setTaskCompletionOverrides((prev) => {
+      const next = { ...prev }
+      for (const task of children.tasks) {
+        next[task._id] = true
+      }
+      return next
+    })
+    try {
+      await bulkCompleteCategory({ id: categoryId as Id<'categories'> })
+    } finally {
+      setIsBulkCompleting(false)
+    }
   }
 
   return (
@@ -131,6 +170,16 @@ function CategoryDetail() {
                 categoryId={category._id}
                 completionOverride={completionOverride}
               />
+              {hasDescendantTasks ? (
+                <Button
+                  variant="secondary"
+                  className="h-9 w-fit px-4"
+                  onClick={handleBulkComplete}
+                  disabled={!hasIncompleteDescendants || isBulkCompleting}
+                >
+                  {isBulkCompleting ? 'Completing...' : 'Complete all tasks'}
+                </Button>
+              ) : null}
             </div>
           ) : (
             <h1 className="text-3xl font-semibold text-rose-200">

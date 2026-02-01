@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 
 export const listCategories = query({
   args: {},
@@ -236,14 +237,66 @@ export const toggleTaskCompletion = mutation({
   },
 })
 
+export const bulkCompleteCategory = mutation({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    const rootCategory = await ctx.db.get(args.id)
+    if (!rootCategory) {
+      throw new Error('Category not found')
+    }
+
+    const visited = new Set<string>()
+    const queue: Array<Id<'categories'>> = [rootCategory._id]
+    const categoryIds: Array<Id<'categories'>> = []
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!
+      if (visited.has(currentId)) {
+        continue
+      }
+      visited.add(currentId)
+      categoryIds.push(currentId)
+
+      const children = await ctx.db
+        .query('categories')
+        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .collect()
+      for (const child of children) {
+        if (!visited.has(child._id)) {
+          queue.push(child._id)
+        }
+      }
+    }
+
+    let updated = 0
+    const completedAt = Date.now()
+
+    for (const categoryId of categoryIds) {
+      const tasks = await ctx.db
+        .query('tasks')
+        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .collect()
+      const incompleteTasks = tasks.filter((task) => !task.isCompleted)
+      if (incompleteTasks.length === 0) {
+        continue
+      }
+      for (const task of incompleteTasks) {
+        await ctx.db.patch(task._id, {
+          isCompleted: true,
+          lastCompletedDate: completedAt,
+        })
+        updated += 1
+      }
+    }
+
+    return { updated }
+  },
+})
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
-      .query('todos')
-      .withIndex('by_creation_time')
-      .order('desc')
-      .collect()
+    return await ctx.db.query('todos').order('desc').collect()
   },
 })
 export const add = mutation({
