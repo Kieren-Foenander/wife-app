@@ -9,3 +9,4 @@ Completed: Baseline audit of demo routes/components.
 - Fixed lint violations (import order, spacing, type-only imports, array types).
 Completed: Removed demo routes from main navigation to keep demo access out of app menu.
 Completed: Added minimal Convex schema tables for categories and tasks.
+Completed: Added Convex query/mutation stubs for categories and tasks.

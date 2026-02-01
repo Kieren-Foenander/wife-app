@@ -1,6 +1,38 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 
+export const listCategories = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query('categories').order('desc').collect()
+  },
+})
+
+export const createCategory = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('categories', {
+      name: args.name,
+    })
+  },
+})
+
+export const listTasks = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query('tasks').order('desc').collect()
+  },
+})
+
+export const createTask = mutation({
+  args: { title: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('tasks', {
+      title: args.title,
+    })
+  },
+})
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
