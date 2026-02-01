@@ -62,4 +62,53 @@ test.describe('Daily view smoke', () => {
     await childTaskForm.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByText(childTaskTitle)).toBeVisible()
   })
+
+  test('deep nesting navigation works', async ({ page }) => {
+    const rootCategoryName = `Home ${Date.now()}`
+    const childCategoryName = `Kitchen ${Date.now()}`
+    const grandchildCategoryName = `Pantry ${Date.now()}`
+
+    await page.goto('/')
+    await page.getByPlaceholder(/laundry, groceries/i).fill(rootCategoryName)
+    await page.getByRole('button', { name: 'Create' }).click()
+    await expect(page.getByRole('link', { name: rootCategoryName })).toBeVisible()
+    await page.getByRole('link', { name: rootCategoryName }).click()
+    await expect(
+      page.getByRole('heading', { name: rootCategoryName }),
+    ).toBeVisible()
+
+    const childCategoryForm = page
+      .getByRole('heading', { name: /add a child category/i })
+      .locator('..')
+    await childCategoryForm
+      .getByPlaceholder(/cleaning, errands/i)
+      .fill(childCategoryName)
+    await childCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await expect(
+      page.getByRole('link', { name: childCategoryName }),
+    ).toBeVisible()
+    await page.getByRole('link', { name: childCategoryName }).click()
+    await expect(
+      page.getByRole('heading', { name: childCategoryName }),
+    ).toBeVisible()
+
+    const grandchildCategoryForm = page
+      .getByRole('heading', { name: /add a child category/i })
+      .locator('..')
+    await grandchildCategoryForm
+      .getByPlaceholder(/cleaning, errands/i)
+      .fill(grandchildCategoryName)
+    await grandchildCategoryForm.getByRole('button', { name: 'Create' }).click()
+    await expect(
+      page.getByRole('link', { name: grandchildCategoryName }),
+    ).toBeVisible()
+    await page.getByRole('link', { name: grandchildCategoryName }).click()
+    await expect(
+      page.getByRole('heading', { name: grandchildCategoryName }),
+    ).toBeVisible()
+
+    const breadcrumb = page.locator('nav', { hasText: 'Daily' })
+    await expect(breadcrumb).toContainText(rootCategoryName)
+    await expect(breadcrumb).toContainText(childCategoryName)
+  })
 })
