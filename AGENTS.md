@@ -12,3 +12,5 @@ Non-standard commands:
 - `pnpm feedback` - Runs typecheck, convex:check, test, and lint (Ralph feedback loops)
 
 For React patterns and conventions, see `docs/REACT.md`. For Convex conventions, see `.cursorrules`. For running a Ralph loop with Cursor Agent CLI, see `docs/RALPH.md`.
+
+Be extremely concise. Sacrifice grammar for the sake of concision.
