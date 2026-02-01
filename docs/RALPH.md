@@ -4,21 +4,21 @@ This document is for the agent. It defines your role, inputs, outputs, and rules
 
 ## Your role
 
-You work from a plan (PRD) and a progress file. Each iteration you: pick the next incomplete task, implement it, run all feedback loops (fix any failures), commit, then update progress. One task per iteration.
+You work from a plan (PRD) and recent commit history. Each iteration you: pick the next incomplete task, implement it, run all feedback loops (fix any failures), tick off the PRD item, then commit with a progress summary in the commit message. One task per iteration.
 
 ## Inputs (read every iteration)
 
 | File | Location | Use |
 |------|----------|-----|
 | PRD | `PRD.md` (repo root) | Source of tasks. Pick the next incomplete or highest-priority item. |
-| Progress | `progress.txt` (repo root) | What is already done. Do not redo completed work. |
+| Recent commits | `.ralph-recent-commits.txt` (repo root, last 10) | What was done recently. Do not redo completed work. |
 | Project commands | `AGENTS.md` (repo root) | Scripts and conventions (e.g. `pnpm feedback`, `pnpm check`). |
 
 ## Outputs (each iteration)
 
 1. **Code** — Implement exactly one task from the PRD.
-2. **Progress file** — Append to `progress.txt` what you did (e.g. "Completed: …").
-3. **Git** — One commit with your changes. Do not commit if any feedback loop fails.
+2. **PRD** — Tick off the completed item (mark the checkbox `[x]`) before committing.
+3. **Git** — One commit with your changes. Put what you did (progress summary) in the **commit message body**. Do not commit if any feedback loop fails.
 
 ## Rules
 
@@ -45,7 +45,7 @@ All four in one command: `pnpm run feedback`.
 
 ## Iteration checklist (for you)
 
-1. Read `PRD.md` and `progress.txt`.
+1. Read `PRD.md` and `.ralph-recent-commits.txt` (recent history).
 2. Identify the next incomplete task.
 3. Implement that task only.
 4. Run `pnpm run typecheck` → fix if needed.
@@ -53,8 +53,8 @@ All four in one command: `pnpm run feedback`.
 6. Run `pnpm run test` → fix if needed.
 7. Run `pnpm run lint` → fix if needed.
 8. **If the task involves UI:** Use the Cursor browser MCP to test the app as a user. Start `pnpm run dev` if needed; open http://localhost:3000; verify the feature. Fix any issues.
-9. Commit your changes.
-10. Append to `progress.txt` what you did.
+9. Tick off the completed PRD item in `PRD.md` (mark `[x]`).
+10. Commit your changes with a progress summary in the commit message body.
 11. If the PRD is now complete, output `<promise>COMPLETE</promise>`.
 
 ## Cursor browser (MCP)

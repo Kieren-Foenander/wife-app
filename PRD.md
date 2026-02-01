@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD)
 
-This is your Ralph plan file. The agent reads this file and `progress.txt` on each run, picks the next incomplete task, implements it, commits, and updates progress.
+This is your Ralph plan file. The agent reads this file and the last 10 commit messages (`.ralph-recent-commits.txt`) on each run, picks the next incomplete task, implements it, ticks off the item here, then commits with progress in the commit message.
 
-Format: markdown checklists. One task per iteration; run `pnpm run typecheck`, `pnpm run convex:check`, `pnpm run test`, `pnpm run lint`, then UI verification via Cursor browser, then commit and append to `progress.txt`. See [docs/RALPH.md](docs/RALPH.md).
+Format: markdown checklists. One task per iteration; run feedback loops, then UI verification via Cursor browser if needed, then tick the PRD item and commit with progress in the commit message. See [docs/RALPH.md](docs/RALPH.md).
 
 ---
 
