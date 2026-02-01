@@ -15,6 +15,9 @@ function CategoryDetail() {
   const category = useQuery(api.todos.getCategory, {
     id: categoryId as Id<'categories'>,
   })
+  const ancestors = useQuery(api.todos.listCategoryAncestors, {
+    id: categoryId as Id<'categories'>,
+  })
   const children = useQuery(api.todos.listCategoryChildren, {
     id: categoryId as Id<'categories'>,
   })
@@ -26,6 +29,33 @@ function CategoryDetail() {
           <Button asChild variant="secondary" className="h-9 w-fit px-4">
             <Link to="/">Back to Daily</Link>
           </Button>
+          {ancestors === undefined || category === undefined ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-600">
+              Loading path...
+            </p>
+          ) : (
+            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+              <Link to="/" className="hover:text-slate-200">
+                Daily
+              </Link>
+              {ancestors.map((ancestor) => (
+                <span key={ancestor._id} className="flex items-center gap-2">
+                  <span className="text-slate-600">/</span>
+                  <Link
+                    to="/categories/$categoryId"
+                    params={{ categoryId: ancestor._id }}
+                    className="hover:text-slate-200"
+                  >
+                    {ancestor.name}
+                  </Link>
+                </span>
+              ))}
+              <span className="flex items-center gap-2 text-slate-200">
+                <span className="text-slate-600">/</span>
+                {category ? category.name : 'Unknown'}
+              </span>
+            </nav>
+          )}
           <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
             Category
           </p>

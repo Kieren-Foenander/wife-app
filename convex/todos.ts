@@ -15,6 +15,31 @@ export const getCategory = query({
   },
 })
 
+export const listCategoryAncestors = query({
+  args: { id: v.id('categories') },
+  handler: async (ctx, args) => {
+    const ancestors = []
+    const visited = new Set<string>()
+    let current = await ctx.db.get(args.id)
+
+    while (current?.parentCategoryId) {
+      const parentId = current.parentCategoryId
+      if (visited.has(parentId)) {
+        break
+      }
+      visited.add(parentId)
+      const parent = await ctx.db.get(parentId)
+      if (!parent) {
+        break
+      }
+      ancestors.push(parent)
+      current = parent
+    }
+
+    return ancestors.reverse()
+  },
+})
+
 export const listCategoryChildren = query({
   args: { id: v.id('categories') },
   handler: async (ctx, args) => {

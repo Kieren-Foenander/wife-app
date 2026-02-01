@@ -30,6 +30,9 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('link', { name: categoryName }).click()
     await expect(page.getByRole('heading', { name: categoryName })).toBeVisible()
     await expect(page.getByText('Category', { exact: true })).toBeVisible()
+    const breadcrumb = page.locator('nav', { hasText: 'Daily' })
+    await expect(breadcrumb.getByRole('link', { name: 'Daily' })).toBeVisible()
+    await expect(breadcrumb).toContainText(categoryName)
     await expect(
       page.getByRole('heading', { name: /child categories/i }),
     ).toBeVisible()
