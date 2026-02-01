@@ -186,7 +186,11 @@ function DailyView() {
           </div>
           <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
-              {view === 'day' ? 'Daily' : view === 'week' ? 'Weekly' : 'Monthly'}
+              {view === 'day'
+                ? `Today - ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}`
+                : view === 'week'
+                  ? 'Weekly'
+                  : 'Monthly'}
             </p>
             <h1 className="text-4xl font-semibold text-slate-100">
               Categories

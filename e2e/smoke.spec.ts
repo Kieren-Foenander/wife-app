@@ -4,7 +4,7 @@ test.describe('Daily view smoke', () => {
   test('app loads and shows Daily view', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Categories', level: 1 })).toBeVisible()
-    await expect(page.getByText('Daily')).toBeVisible()
+    await expect(page.getByText(/Today - \w+/)).toBeVisible()
   })
 
   test('view mode toggle switches Day/Week/Month', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Week', selected: false })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Month', selected: false })).toBeVisible()
-    await expect(page.getByText('Daily')).toBeVisible()
+    await expect(page.getByText(/Today - \w+/)).toBeVisible()
     await page.getByRole('tab', { name: 'Week' }).click()
     await expect(page.getByRole('tab', { name: 'Week', selected: true })).toBeVisible()
     await expect(page.getByText('Weekly')).toBeVisible()
@@ -23,7 +23,7 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByText('Monthly')).toBeVisible()
     await page.getByRole('tab', { name: 'Day' }).click()
     await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
-    await expect(page.getByText('Daily')).toBeVisible()
+    await expect(page.getByText(/Today - \w+/)).toBeVisible()
   })
 
   test('category and task forms are present', async ({ page }) => {
