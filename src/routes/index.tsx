@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -8,6 +8,71 @@ import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
 export type ViewMode = 'day' | 'week' | 'month'
+
+/** Current week Sunday–Saturday (en-US) as Date objects at local midnight */
+function getCurrentWeekDates(): Array<Date> {
+  const now = new Date()
+  const day = now.getDay()
+  const start = new Date(now)
+  start.setDate(now.getDate() - day)
+  start.setHours(0, 0, 0, 0)
+  const dates: Array<Date> = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    dates.push(d)
+  }
+  return dates
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function WeekStrip() {
+  const weekDates = useMemo(getCurrentWeekDates, [])
+  const today = useMemo(() => new Date(), [])
+
+  return (
+    <section
+      role="region"
+      aria-label="Week"
+      className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+    >
+      <div className="flex min-w-0 gap-2">
+        {weekDates.map((d) => {
+          const isToday = isSameDay(d, today)
+          return (
+            <div
+              key={d.toISOString()}
+              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 ${
+                isToday
+                  ? 'border-slate-500 bg-slate-700/80 text-slate-100'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-300'
+              }`}
+            >
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                {d.toLocaleDateString('en-US', { weekday: 'short' })}
+              </span>
+              <span className="text-lg font-semibold tabular-nums">
+                {d.getDate()}
+              </span>
+              {isToday ? (
+                <span className="rounded bg-slate-600 px-2 py-0.5 text-xs font-medium text-slate-200">
+                  Today
+                </span>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 
 export const Route = createFileRoute('/')({
   ssr: false,
@@ -200,6 +265,10 @@ function DailyView() {
             </p>
           </div>
         </header>
+
+        {view === 'week' ? (
+          <WeekStrip />
+        ) : null}
 
         <form
           onSubmit={handleSubmit}

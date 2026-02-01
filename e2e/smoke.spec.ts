@@ -18,6 +18,7 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('tab', { name: 'Week' }).click()
     await expect(page.getByRole('tab', { name: 'Week', selected: true })).toBeVisible()
     await expect(page.getByText('Weekly')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Week' })).toBeVisible()
     await page.getByRole('tab', { name: 'Month' }).click()
     await expect(page.getByRole('tab', { name: 'Month', selected: true })).toBeVisible()
     await expect(page.getByText('Monthly')).toBeVisible()
