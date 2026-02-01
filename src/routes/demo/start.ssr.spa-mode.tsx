@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import type { PunkSong } from '@/data/demo.punk-songs'
 import { getPunkSongs } from '@/data/demo.punk-songs'
 
 export const Route = createFileRoute('/demo/start/ssr/spa-mode')({
@@ -8,12 +9,10 @@ export const Route = createFileRoute('/demo/start/ssr/spa-mode')({
 })
 
 function RouteComponent() {
-  const [punkSongs, setPunkSongs] = useState<
-    Awaited<ReturnType<typeof getPunkSongs>>
-  >([])
+  const [punkSongs, setPunkSongs] = useState<Array<PunkSong>>([])
 
   useEffect(() => {
-    getPunkSongs().then(setPunkSongs)
+    setPunkSongs(getPunkSongs())
   }, [])
 
   return (
