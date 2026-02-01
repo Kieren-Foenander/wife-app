@@ -1,0 +1,9 @@
+Completed: Baseline audit of demo routes/components.
+- Demo routes in `src/routes/demo`: `/demo/convex`, `/demo/tanstack-query`, `/demo/start/api-request`, `/demo/start/server-funcs`,
+  SSR demos `/demo/start/ssr` index plus `spa-mode`, `full-ssr`, `data-only`,
+  forms `/demo/form/simple` and `/demo/form/address`, API routes `/demo/api/names`, `/demo/api/tq-todos`.
+- Demo components/hooks: `src/components/demo.FormComponents.tsx`, `src/hooks/demo.form.ts`, `src/hooks/demo.form-context.ts`.
+- Added `src/data/demo.punk-songs.ts` to back SSR demo data imports.
+- Added `vitest.config.ts` to run tests in node (fixes `module is not defined`).
+- Updated `pnpm run test` to pass when no tests exist.
+- Fixed lint violations (import order, spacing, type-only imports, array types).
