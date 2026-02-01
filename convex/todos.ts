@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { frequencyValidator } from './schema'
-import type { Id } from './_generated/dataModel'
 
 /** Frequency type for next-due computation. */
 type Frequency =
@@ -154,210 +153,6 @@ function getCurrentMonthRangeUTC(nowMs: number): { start: number; end: number } 
   return { start, end }
 }
 
-export const listCategories = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query('categories').order('desc').collect()
-  },
-})
-
-/** Categories in tree order (root then children) with depth for parent dropdown. */
-export const listCategoriesForParentPicker = query({
-  args: {},
-  handler: async (ctx) => {
-    const all = await ctx.db.query('categories').collect()
-    const byParent = new Map<Id<'categories'> | undefined, typeof all>()
-    for (const c of all) {
-      const key = c.parentCategoryId
-      if (!byParent.has(key)) byParent.set(key, [])
-      byParent.get(key)!.push(c)
-    }
-    const out: Array<{ _id: Id<'categories'>; name: string; depth: number }> = []
-    function visit(parentId: Id<'categories'> | undefined, depth: number) {
-      const children = byParent.get(parentId) ?? []
-      for (const c of children) {
-        out.push({ _id: c._id, name: c.name, depth })
-        visit(c._id, depth + 1)
-      }
-    }
-    visit(undefined, 0)
-    return out
-  },
-})
-
-export const getCategory = query({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id)
-  },
-})
-
-export const listCategoryAncestors = query({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    const ancestors = []
-    const visited = new Set<string>()
-    let current = await ctx.db.get(args.id)
-
-    while (current?.parentCategoryId) {
-      const parentId = current.parentCategoryId
-      if (visited.has(parentId)) {
-        break
-      }
-      visited.add(parentId)
-      const parent = await ctx.db.get(parentId)
-      if (!parent) {
-        break
-      }
-      ancestors.push(parent)
-      current = parent
-    }
-
-    return ancestors.reverse()
-  },
-})
-
-export const listCategoryChildren = query({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    const [categories, tasksRaw] = await Promise.all([
-      ctx.db
-        .query('categories').withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id)).order('desc').collect(),
-      ctx.db.query('tasks').withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id)).collect(),
-    ])
-    // Uncompleted first, completed last in category detail
-    const tasks = [...tasksRaw].sort(
-      (a, b) => Number(a.isCompleted) - Number(b.isCompleted),
-    )
-
-    const visited = new Set<string>()
-    const queue = [args.id]
-    const categoryIds: Array<Id<'categories'>> = []
-
-    while (queue.length > 0) {
-      const currentId = queue.shift()
-      if (!currentId || visited.has(currentId)) {
-        continue
-      }
-      visited.add(currentId)
-      categoryIds.push(currentId)
-
-      const children = await ctx.db
-        .query('categories')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
-        .collect()
-      for (const child of children) {
-        if (!visited.has(child._id)) {
-          queue.push(child._id)
-        }
-      }
-    }
-
-    let total = 0
-    let completed = 0
-
-    for (const categoryId of categoryIds) {
-      const descendantTasks = await ctx.db
-        .query('tasks')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
-        .collect()
-      total += descendantTasks.length
-      completed += descendantTasks.filter((task) => task.isCompleted).length
-    }
-
-    return { categories, tasks, completion: { total, completed } }
-  },
-})
-
-export const getCategoryCompletion = query({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    const rootCategory = await ctx.db.get(args.id)
-    if (!rootCategory) {
-      return null
-    }
-
-    const visited = new Set<string>()
-    const queue = [rootCategory._id]
-    const categoryIds: Array<Id<'categories'>> = []
-
-    while (queue.length > 0) {
-      const currentId = queue.shift()
-      if (!currentId || visited.has(currentId)) {
-        continue
-      }
-      visited.add(currentId)
-      categoryIds.push(currentId)
-
-      const children = await ctx.db
-        .query('categories')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
-        .collect()
-      for (const child of children) {
-        if (!visited.has(child._id)) {
-          queue.push(child._id)
-        }
-      }
-    }
-
-    let total = 0
-    let completed = 0
-
-    for (const categoryId of categoryIds) {
-      const tasks = await ctx.db
-        .query('tasks')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
-        .collect()
-      total += tasks.length
-      completed += tasks.filter((task) => task.isCompleted).length
-    }
-
-    return { total, completed }
-  },
-})
-
-export const createCategory = mutation({
-  args: {
-    name: v.string(),
-    parentCategoryId: v.optional(v.id('categories')),
-    color: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert('categories', {
-      name: args.name,
-      parentCategoryId: args.parentCategoryId,
-      color: args.color,
-    })
-  },
-})
-
-export const updateCategory = mutation({
-  args: {
-    id: v.id('categories'),
-    name: v.string(),
-    color: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const patch: { name: string; color?: string } = { name: args.name }
-    if (args.color !== undefined) patch.color = args.color
-    return await ctx.db.patch(args.id, patch)
-  },
-})
-
-export const deleteCategory = mutation({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    const hasTasks = await ctx.db
-      .query('tasks')
-      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id))
-      .first()
-    if (hasTasks) {
-      throw new Error('Category has tasks. Remove them before deleting.')
-    }
-    return await ctx.db.delete(args.id)
-  },
-})
-
 export const listTasks = query({
   args: {},
   handler: async (ctx) => {
@@ -370,7 +165,7 @@ export const listRootTasks = query({
   handler: async (ctx) => {
     return await ctx.db
       .query('tasks')
-      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
+      .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
   },
@@ -383,7 +178,7 @@ export const listRootTasksDueOnDate = query({
     const now = Date.now()
     const rootTasks = await ctx.db
       .query('tasks')
-      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
+      .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
     return rootTasks.filter((task) =>
@@ -400,7 +195,7 @@ export const listRootTasksDueInWeek = query({
     const { start, end } = getCurrentWeekRangeUTC(now)
     const rootTasks = await ctx.db
       .query('tasks')
-      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
+      .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
     return rootTasks.filter((task) =>
@@ -417,7 +212,7 @@ export const listRootTasksDueInMonth = query({
     const { start, end } = getCurrentMonthRangeUTC(now)
     const rootTasks = await ctx.db
       .query('tasks')
-      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
+      .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
     return rootTasks.filter((task) =>
@@ -429,19 +224,15 @@ export const listRootTasksDueInMonth = query({
 export const createTask = mutation({
   args: {
     title: v.string(),
-    parentCategoryId: v.optional(v.id('categories')),
+    parentTaskId: v.optional(v.id('tasks')),
     dueDate: v.optional(v.number()),
-    repeatEnabled: v.optional(v.boolean()),
     frequency: v.optional(frequencyValidator),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert('tasks', {
       title: args.title,
-      parentCategoryId: args.parentCategoryId,
-      isCompleted: false,
-      lastCompletedDate: undefined,
+      parentTaskId: args.parentTaskId,
       dueDate: args.dueDate,
-      repeatEnabled: args.repeatEnabled ?? false,
       frequency: args.frequency,
     })
   },
@@ -451,7 +242,7 @@ export const updateTask = mutation({
   args: {
     id: v.id('tasks'),
     title: v.optional(v.string()),
-    repeatEnabled: v.optional(v.boolean()),
+    dueDate: v.optional(v.number()),
     frequency: v.optional(frequencyValidator),
   },
   handler: async (ctx, args) => {
@@ -461,7 +252,7 @@ export const updateTask = mutation({
     }
     const patch: {
       title?: string
-      repeatEnabled?: boolean
+      dueDate?: number
       frequency?:
       | 'daily'
       | 'bi-daily'
@@ -473,7 +264,7 @@ export const updateTask = mutation({
       | 'yearly'
     } = {}
     if (args.title !== undefined) patch.title = args.title
-    if (args.repeatEnabled !== undefined) patch.repeatEnabled = args.repeatEnabled
+    if (args.dueDate !== undefined) patch.dueDate = args.dueDate
     if (args.frequency !== undefined) patch.frequency = args.frequency
     return await ctx.db.patch(args.id, patch)
   },
@@ -486,125 +277,3 @@ export const deleteTask = mutation({
   },
 })
 
-export const toggleTaskCompletion = mutation({
-  args: { id: v.id('tasks') },
-  handler: async (ctx, args) => {
-    const task = await ctx.db.get(args.id)
-    if (!task) {
-      throw new Error('Task not found')
-    }
-    const nextCompleted = !task.isCompleted
-    const isRecurring =
-      task.repeatEnabled === true && task.frequency != null
-
-    if (nextCompleted) {
-      if (isRecurring) {
-        // Recurring: set lastCompletedDate so task drops off today and reappears next interval; keep unchecked for next period
-        return await ctx.db.patch(args.id, {
-          lastCompletedDate: Date.now(),
-          isCompleted: false,
-        })
-      }
-      return await ctx.db.patch(args.id, {
-        isCompleted: true,
-        lastCompletedDate: undefined,
-      })
-    }
-    return await ctx.db.patch(args.id, {
-      isCompleted: false,
-      lastCompletedDate: undefined,
-    })
-  },
-})
-
-export const bulkCompleteCategory = mutation({
-  args: { id: v.id('categories') },
-  handler: async (ctx, args) => {
-    const rootCategory = await ctx.db.get(args.id)
-    if (!rootCategory) {
-      throw new Error('Category not found')
-    }
-
-    const visited = new Set<string>()
-    const queue: Array<Id<'categories'>> = [rootCategory._id]
-    const categoryIds: Array<Id<'categories'>> = []
-
-    while (queue.length > 0) {
-      const currentId = queue.shift()!
-      if (visited.has(currentId)) {
-        continue
-      }
-      visited.add(currentId)
-      categoryIds.push(currentId)
-
-      const children = await ctx.db
-        .query('categories')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
-        .collect()
-      for (const child of children) {
-        if (!visited.has(child._id)) {
-          queue.push(child._id)
-        }
-      }
-    }
-
-    let updated = 0
-    const completedAt = Date.now()
-
-    for (const categoryId of categoryIds) {
-      const tasks = await ctx.db
-        .query('tasks')
-        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
-        .collect()
-      const incompleteTasks = tasks.filter((task) => !task.isCompleted)
-      if (incompleteTasks.length === 0) {
-        continue
-      }
-      for (const task of incompleteTasks) {
-        const isRecurring =
-          task.repeatEnabled === true && task.frequency != null
-        await ctx.db.patch(task._id, {
-          lastCompletedDate: completedAt,
-          isCompleted: isRecurring ? false : true,
-        })
-        updated += 1
-      }
-    }
-
-    return { updated }
-  },
-})
-
-export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query('todos').order('desc').collect()
-  },
-})
-export const add = mutation({
-  args: { text: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert('todos', {
-      text: args.text,
-      completed: false,
-    })
-  },
-})
-export const toggle = mutation({
-  args: { id: v.id('todos') },
-  handler: async (ctx, args) => {
-    const todo = await ctx.db.get(args.id)
-    if (!todo) {
-      throw new Error('Todo not found')
-    }
-    return await ctx.db.patch(args.id, {
-      completed: !todo.completed,
-    })
-  },
-})
-export const remove = mutation({
-  args: { id: v.id('todos') },
-  handler: async (ctx, args) => {
-    return await ctx.db.delete(args.id)
-  },
-})

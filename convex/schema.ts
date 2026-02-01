@@ -14,27 +14,16 @@ export const frequencyValidator = v.union(
 )
 
 export default defineSchema({
-  categories: defineTable({
-    name: v.string(),
-    parentCategoryId: v.optional(v.id('categories')),
-    color: v.optional(v.string()),
-  }).index('byParentCategoryId', ['parentCategoryId']),
-  products: defineTable({
-    title: v.string(),
-    imageId: v.string(),
-    price: v.number(),
-  }),
   tasks: defineTable({
     title: v.string(),
-    parentCategoryId: v.optional(v.id('categories')),
-    isCompleted: v.optional(v.boolean()),
-    lastCompletedDate: v.optional(v.number()),
+    parentTaskId: v.optional(v.id('tasks')),
     dueDate: v.optional(v.number()),
-    repeatEnabled: v.optional(v.boolean()),
     frequency: v.optional(frequencyValidator),
-  }).index('byParentCategoryId', ['parentCategoryId']),
-  todos: defineTable({
-    text: v.string(),
-    completed: v.boolean(),
-  }),
+  }).index('byParentTaskId', ['parentTaskId']),
+  completedTasks: defineTable({
+    taskId: v.id('tasks'),
+    completedDate: v.optional(v.number()),
+  })
+    .index('by_task_id', ['taskId'])
+    .index('by_task_id_completed_date', ['taskId', 'completedDate']),
 })
