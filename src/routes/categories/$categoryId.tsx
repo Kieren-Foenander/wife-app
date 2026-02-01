@@ -35,17 +35,17 @@ function CategoryDetail() {
     useState<Id<'tasks'> | null>(null)
   const completionOverride = children
     ? {
-        total: children.tasks.length,
-        completed: children.tasks.filter(
-          (task) => taskCompletionOverrides[task._id] ?? task.isCompleted,
-        ).length,
-      }
+      total: children.tasks.length,
+      completed: children.tasks.filter(
+        (task) => taskCompletionOverrides[task._id] ?? task.isCompleted,
+      ).length,
+    }
     : undefined
   const directCompletion = children
     ? {
-        total: children.tasks.length,
-        completed: children.tasks.filter((task) => task.isCompleted).length,
-      }
+      total: children.tasks.length,
+      completed: children.tasks.filter((task) => task.isCompleted).length,
+    }
     : undefined
   const completionFromQuery = children?.completion
   const effectiveCompletion =
@@ -88,6 +88,7 @@ function CategoryDetail() {
   const handleAddTask = async (params: {
     title: string
     parentCategoryId?: Id<'categories'>
+    dueDate?: number
     repeatEnabled?: boolean
     frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
   }) => {
@@ -95,6 +96,7 @@ function CategoryDetail() {
       await createTask({
         title: params.title,
         parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
+        dueDate: params.dueDate,
         repeatEnabled: params.repeatEnabled,
         frequency: params.frequency,
       })
@@ -236,6 +238,7 @@ function CategoryDetail() {
             onAddCategory={handleAddCategory}
             onAddTask={handleAddTask}
             title="Add child category or task"
+            defaultDueDate={new Date()}
           />
         </div>
 
@@ -318,11 +321,10 @@ function CategoryDetail() {
                   return (
                     <li
                       key={task._id}
-                      className={`flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
-                        celebratingTaskId === task._id
+                      className={`flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === task._id
                           ? 'animate-completion-bounce'
                           : ''
-                      }`}
+                        }`}
                     >
                       <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
                       <label className="flex flex-1 items-center gap-3">
@@ -336,9 +338,8 @@ function CategoryDetail() {
                           aria-label={`Mark ${task.title} complete`}
                         />
                         <span
-                          className={`flex-1 ${
-                            isCompleted ? 'text-slate-500 line-through' : ''
-                          }`}
+                          className={`flex-1 ${isCompleted ? 'text-slate-500 line-through' : ''
+                            }`}
                         >
                           {task.title}
                         </span>

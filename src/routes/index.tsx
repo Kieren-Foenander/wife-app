@@ -14,48 +14,57 @@ import type { Id } from '../../convex/_generated/dataModel'
 
 export type ViewMode = 'day' | 'week' | 'month'
 
-/** Current week Sunday–Saturday (en-US) as Date objects at local midnight */
-function getCurrentWeekDates(): Array<Date> {
-  const now = new Date()
-  const day = now.getDay()
-  const start = new Date(now)
-  start.setDate(now.getDate() - day)
-  start.setHours(0, 0, 0, 0)
+/** Format date as YYYY-MM-DD (UTC). */
+function toYYYYMMDDUTC(d: Date): string {
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Parse YYYY-MM-DD to Date at midnight UTC. */
+function fromYYYYMMDD(s: string): Date {
+  const [y, m = 1, d = 1] = s.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d))
+}
+
+/** UTC start-of-day ms for a Date (uses UTC date parts). */
+function startOfDayUTCFromDate(d: Date): number {
+  return Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+  )
+}
+
+/** Week Sunday–Saturday (en-US) containing the given date; dates at midnight UTC. */
+function getWeekDatesFor(selectedDate: Date): Array<Date> {
+  const d = new Date(selectedDate)
+  const day = d.getUTCDay()
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day))
   const dates: Array<Date> = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    dates.push(d)
+    dates.push(new Date(start.getTime() + i * 24 * 60 * 60 * 1000))
   }
   return dates
 }
 
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
-
-/** Current month as 6 weeks × 7 days (Sun–Sat). Cells are Date or null (other month). */
-function getCurrentMonthGrid(): Array<Array<Date | null>> {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth()
-  const first = new Date(year, month, 1)
-  const firstDay = first.getDay()
-  const startOffset = firstDay
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
+/** Month grid (6×7) for the given date; cells are Date (midnight UTC) or null. */
+function getMonthGridFor(selectedDate: Date): Array<Array<Date | null>> {
+  const year = selectedDate.getUTCFullYear()
+  const month = selectedDate.getUTCMonth()
+  const first = new Date(Date.UTC(year, month, 1))
+  const firstDay = first.getUTCDay()
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
   const grid: Array<Array<Date | null>> = []
-  let dayIndex = 1 - startOffset
+  let dayIndex = 1 - firstDay
   for (let row = 0; row < 6; row++) {
     const week: Array<Date | null> = []
     for (let col = 0; col < 7; col++) {
       if (dayIndex < 1 || dayIndex > daysInMonth) {
         week.push(null)
       } else {
-        week.push(new Date(year, month, dayIndex))
+        week.push(new Date(Date.UTC(year, month, dayIndex)))
       }
       dayIndex++
     }
@@ -64,9 +73,28 @@ function getCurrentMonthGrid(): Array<Array<Date | null>> {
   return grid
 }
 
-function WeekStrip() {
-  const weekDates = useMemo(getCurrentWeekDates, [])
-  const today = useMemo(() => new Date(), [])
+function WeekStrip({
+  selectedDate,
+  onSelectDay,
+}: {
+  selectedDate: Date
+  onSelectDay: (d: Date) => void
+}) {
+  const weekDates = useMemo(
+    () => getWeekDatesFor(selectedDate),
+    [selectedDate],
+  )
+  const todayUTC = useMemo(
+    () =>
+      new Date(
+        Date.UTC(
+          new Date().getUTCFullYear(),
+          new Date().getUTCMonth(),
+          new Date().getUTCDate(),
+        ),
+      ),
+    [],
+  )
 
   return (
     <section
@@ -76,28 +104,43 @@ function WeekStrip() {
     >
       <div className="flex min-w-0 gap-2">
         {weekDates.map((d) => {
-          const isToday = isSameDay(d, today)
+          const isToday =
+            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
+            d.getUTCMonth() === todayUTC.getUTCMonth() &&
+            d.getUTCDate() === todayUTC.getUTCDate()
+          const isSelected =
+            d.getTime() === startOfDayUTCFromDate(selectedDate)
           return (
-            <div
+            <button
+              type="button"
               key={d.toISOString()}
-              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 ${
-                isToday
-                  ? 'border-slate-500 bg-slate-700/80 text-slate-100'
-                  : 'border-slate-800 bg-slate-950/60 text-slate-300'
+              onClick={() => onSelectDay(d)}
+              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${
+                isSelected
+                  ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                  : isToday
+                    ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
+                    : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
               }`}
+              aria-label={d.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+              })}
+              aria-pressed={isSelected}
             >
               <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 {d.toLocaleDateString('en-US', { weekday: 'short' })}
               </span>
               <span className="text-lg font-semibold tabular-nums">
-                {d.getDate()}
+                {d.getUTCDate()}
               </span>
               {isToday ? (
                 <span className="rounded bg-slate-600 px-2 py-0.5 text-xs font-medium text-slate-200">
                   Today
                 </span>
               ) : null}
-            </div>
+            </button>
           )
         })}
       </div>
@@ -107,9 +150,28 @@ function WeekStrip() {
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function MonthGrid() {
-  const grid = useMemo(getCurrentMonthGrid, [])
-  const today = useMemo(() => new Date(), [])
+function MonthGrid({
+  selectedDate,
+  onSelectDay,
+}: {
+  selectedDate: Date
+  onSelectDay: (d: Date) => void
+}) {
+  const grid = useMemo(
+    () => getMonthGridFor(selectedDate),
+    [selectedDate],
+  )
+  const todayUTC = useMemo(
+    () =>
+      new Date(
+        Date.UTC(
+          new Date().getUTCFullYear(),
+          new Date().getUTCMonth(),
+          new Date().getUTCDate(),
+        ),
+      ),
+    [],
+  )
 
   return (
     <section
@@ -135,25 +197,38 @@ function MonthGrid() {
               />
             )
           }
-          const isToday = isSameDay(d, today)
+          const isToday =
+            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
+            d.getUTCMonth() === todayUTC.getUTCMonth() &&
+            d.getUTCDate() === todayUTC.getUTCDate()
+          const isSelected = d.getTime() === startOfDayUTCFromDate(selectedDate)
           return (
-            <div
+            <button
+              type="button"
               key={d.toISOString()}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 ${
-                isToday
-                  ? 'border-slate-500 bg-slate-700/80 text-slate-100'
-                  : 'border-slate-800 bg-slate-950/60 text-slate-300'
+              onClick={() => onSelectDay(d)}
+              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${
+                isSelected
+                  ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                  : isToday
+                    ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
+                    : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
               }`}
+              aria-label={d.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
+              aria-pressed={isSelected}
             >
               <span className="text-sm font-medium tabular-nums">
-                {d.getDate()}
+                {d.getUTCDate()}
               </span>
               {isToday ? (
                 <span className="rounded bg-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-slate-200">
                   Today
                 </span>
               ) : null}
-            </div>
+            </button>
           )
         })}
       </div>
@@ -163,17 +238,34 @@ function MonthGrid() {
 
 export const Route = createFileRoute('/')({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): { view: ViewMode } => {
+  validateSearch: (search: Record<string, unknown>): {
+    view: ViewMode
+    date?: string
+  } => {
     const view = search.view
-    if (view === 'week' || view === 'month') return { view }
-    return { view: 'day' }
+    const viewMode: ViewMode =
+      view === 'week' || view === 'month' ? view : 'day'
+    const date =
+      typeof search.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
+        ? search.date
+        : undefined
+    return { view: viewMode, date }
   },
   component: DailyView,
 })
 
 function DailyView() {
-  const { view } = Route.useSearch()
+  const { view, date: dateStr } = Route.useSearch()
   const navigate = useNavigate({ from: '/' })
+  const selectedDate = useMemo(
+    () =>
+      dateStr ? fromYYYYMMDD(dateStr) : fromYYYYMMDD(toYYYYMMDDUTC(new Date())),
+    [dateStr],
+  )
+  const dayStartMs = useMemo(
+    () => startOfDayUTCFromDate(selectedDate),
+    [selectedDate],
+  )
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState<Id<'categories'> | null>(null)
   const [draftNames, setDraftNames] = useState<Record<string, string>>({})
@@ -191,15 +283,21 @@ function DailyView() {
   const deleteTask = useMutation(api.todos.deleteTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const categories = useQuery(api.todos.listCategories)
-  const rootTasksDueToday = useQuery(api.todos.listRootTasksDueToday)
-  const rootTasksDueInWeek = useQuery(api.todos.listRootTasksDueInWeek)
-  const rootTasksDueInMonth = useQuery(api.todos.listRootTasksDueInMonth)
+  const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
+    dayStartMs,
+  })
+  const rootTasksDueInWeek = useQuery(api.todos.listRootTasksDueInWeek, {
+    refDateMs: selectedDate.getTime(),
+  })
+  const rootTasksDueInMonth = useQuery(api.todos.listRootTasksDueInMonth, {
+    refDateMs: selectedDate.getTime(),
+  })
   const rootTasks =
     view === 'week'
       ? rootTasksDueInWeek
       : view === 'month'
         ? rootTasksDueInMonth
-        : rootTasksDueToday
+        : rootTasksDueOnDate
 
   const handleAddCategory = async (params: {
     name: string
@@ -223,6 +321,7 @@ function DailyView() {
   const handleAddTask = async (params: {
     title: string
     parentCategoryId?: Id<'categories'>
+    dueDate?: number
     repeatEnabled?: boolean
     frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
   }) => {
@@ -230,6 +329,7 @@ function DailyView() {
       await createTask({
         title: params.title,
         parentCategoryId: params.parentCategoryId,
+        dueDate: params.dueDate,
         repeatEnabled: params.repeatEnabled,
         frequency: params.frequency,
       })
@@ -379,7 +479,14 @@ function DailyView() {
           <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
               {view === 'day'
-                ? `Today - ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}`
+                ? toYYYYMMDDUTC(selectedDate) === toYYYYMMDDUTC(new Date())
+                  ? `Today - ${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}`
+                  : selectedDate.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                 : view === 'week'
                   ? 'Weekly'
                   : 'Monthly'}
@@ -394,9 +501,29 @@ function DailyView() {
         </header>
 
         {view === 'week' ? (
-          <WeekStrip />
+          <WeekStrip
+            selectedDate={selectedDate}
+            onSelectDay={(d) =>
+              navigate({
+                search: {
+                  view: 'day',
+                  date: toYYYYMMDDUTC(d),
+                },
+              })
+            }
+          />
         ) : view === 'month' ? (
-          <MonthGrid />
+          <MonthGrid
+            selectedDate={selectedDate}
+            onSelectDay={(d) =>
+              navigate({
+                search: {
+                  view: 'day',
+                  date: toYYYYMMDDUTC(d),
+                },
+              })
+            }
+          />
         ) : null}
 
         <div className="flex flex-col gap-4 sm:flex-row">
@@ -413,6 +540,7 @@ function DailyView() {
             onAddCategory={handleAddCategory}
             onAddTask={handleAddTask}
             title="Create category or task"
+            defaultDueDate={selectedDate}
           />
         </div>
 

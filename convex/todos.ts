@@ -62,40 +62,44 @@ function nextDueAfter(lastCompletedMs: number, frequency: Frequency): number {
   }
 }
 
-/** Whether a task is due on the given day (UTC). Non-recurring: due if not completed. Recurring: due if next due <= end of day. */
-export function isTaskDueToday(
-  task: {
-    isCompleted?: boolean
-    lastCompletedDate?: number
-    repeatEnabled?: boolean
-    frequency?: Frequency
-  },
-  todayStartMs: number,
+type TaskForDue = {
+  isCompleted?: boolean
+  lastCompletedDate?: number
+  dueDate?: number
+  repeatEnabled?: boolean
+  frequency?: Frequency
+}
+
+/** Whether a task is due on the given day (UTC). Non-recurring: due on day D iff (!dueDate || dueDate === dayStartMs) and !completed. Recurring: first due = dueDate ?? refTodayStart; due on D if D >= firstDue or next due <= end of D. */
+export function isTaskDueOnDay(
+  task: TaskForDue,
+  dayStartMs: number,
+  refNowMs?: number,
 ): boolean {
+  const refNow = refNowMs ?? Date.now()
+  const todayStart = startOfDayUTC(refNow)
   const isRecurring =
     task.repeatEnabled === true && task.frequency != null
 
   if (!isRecurring) {
-    return !task.isCompleted
-  }
-
-  if (task.lastCompletedDate == null) {
+    if (task.isCompleted) return false
+    if (task.dueDate != null) return task.dueDate === dayStartMs
     return true
   }
 
-  const todayEndMs = todayStartMs + MS_PER_DAY - 1
+  if (task.lastCompletedDate == null) {
+    const firstDue = task.dueDate ?? todayStart
+    return dayStartMs >= firstDue
+  }
+
+  const dayEndMs = dayStartMs + MS_PER_DAY - 1
   const nextDue = nextDueAfter(task.lastCompletedDate, task.frequency!)
-  return nextDue <= todayEndMs
+  return nextDue <= dayEndMs
 }
 
-/** Next due date (start of day UTC ms) for a task. Recurring: next interval after lastCompleted; never completed = today. Non-recurring: treated as today if incomplete. */
+/** Next due date (start of day UTC ms) for a task. Recurring: next interval after lastCompleted; never completed = dueDate ?? today. Non-recurring: treated as today if incomplete. */
 function getNextDueMs(
-  task: {
-    isCompleted?: boolean
-    lastCompletedDate?: number
-    repeatEnabled?: boolean
-    frequency?: Frequency
-  },
+  task: TaskForDue,
   nowMs: number,
 ): number {
   const isRecurring =
@@ -105,19 +109,14 @@ function getNextDueMs(
     return todayStart
   }
   if (task.lastCompletedDate == null) {
-    return todayStart
+    return task.dueDate ?? todayStart
   }
   return nextDueAfter(task.lastCompletedDate, task.frequency!)
 }
 
-/** Whether a task is due within [rangeStartMs, rangeEndMs] (UTC, inclusive). Non-recurring: due if not completed. */
+/** Whether a task is due within [rangeStartMs, rangeEndMs] (UTC, inclusive). */
 function isTaskDueInRange(
-  task: {
-    isCompleted?: boolean
-    lastCompletedDate?: number
-    repeatEnabled?: boolean
-    frequency?: Frequency
-  },
+  task: TaskForDue,
   rangeStartMs: number,
   rangeEndMs: number,
   nowMs: number,
@@ -125,7 +124,11 @@ function isTaskDueInRange(
   const isRecurring =
     task.repeatEnabled === true && task.frequency != null
   if (!isRecurring) {
-    return !task.isCompleted
+    if (task.isCompleted) return false
+    if (task.dueDate != null) {
+      return task.dueDate >= rangeStartMs && task.dueDate <= rangeEndMs
+    }
+    return true
   }
   const nextDue = getNextDueMs(task, nowMs)
   return nextDue >= rangeStartMs && nextDue <= rangeEndMs
@@ -219,15 +222,8 @@ export const listCategoryChildren = query({
   handler: async (ctx, args) => {
     const [categories, tasksRaw] = await Promise.all([
       ctx.db
-        .query('categories')
-        .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
-        .order('desc')
-        .collect(),
-      ctx.db
-        .query('tasks')
-        .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
-        .order('desc')
-        .collect(),
+        .query('categories').withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id)).order('desc').collect(),
+      ctx.db.query('tasks').withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id)).collect(),
     ])
     // Uncompleted first, completed last in category detail
     const tasks = [...tasksRaw].sort(
@@ -236,7 +232,7 @@ export const listCategoryChildren = query({
 
     const visited = new Set<string>()
     const queue = [args.id]
-    const categoryIds: Array<string> = []
+    const categoryIds: Array<Id<'categories'>> = []
 
     while (queue.length > 0) {
       const currentId = queue.shift()
@@ -248,7 +244,7 @@ export const listCategoryChildren = query({
 
       const children = await ctx.db
         .query('categories')
-        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
         .collect()
       for (const child of children) {
         if (!visited.has(child._id)) {
@@ -263,7 +259,7 @@ export const listCategoryChildren = query({
     for (const categoryId of categoryIds) {
       const descendantTasks = await ctx.db
         .query('tasks')
-        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
         .collect()
       total += descendantTasks.length
       completed += descendantTasks.filter((task) => task.isCompleted).length
@@ -283,7 +279,7 @@ export const getCategoryCompletion = query({
 
     const visited = new Set<string>()
     const queue = [rootCategory._id]
-    const categoryIds: Array<string> = []
+    const categoryIds: Array<Id<'categories'>> = []
 
     while (queue.length > 0) {
       const currentId = queue.shift()
@@ -295,7 +291,7 @@ export const getCategoryCompletion = query({
 
       const children = await ctx.db
         .query('categories')
-        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
         .collect()
       for (const child of children) {
         if (!visited.has(child._id)) {
@@ -310,7 +306,7 @@ export const getCategoryCompletion = query({
     for (const categoryId of categoryIds) {
       const tasks = await ctx.db
         .query('tasks')
-        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
         .collect()
       total += tasks.length
       completed += tasks.filter((task) => task.isCompleted).length
@@ -353,7 +349,7 @@ export const deleteCategory = mutation({
   handler: async (ctx, args) => {
     const hasTasks = await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('parentCategoryId'), args.id))
+      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", args.id))
       .first()
     if (hasTasks) {
       throw new Error('Category has tasks. Remove them before deleting.')
@@ -374,36 +370,37 @@ export const listRootTasks = query({
   handler: async (ctx) => {
     return await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
       .order('desc')
       .collect()
   },
 })
 
-/** Root tasks that are due today (UTC). Uses lastCompletedDate + frequency for recurring; non-recurring due if not completed. */
-export const listRootTasksDueToday = query({
-  args: {},
-  handler: async (ctx) => {
+/** Root tasks that are due on the given day (UTC). */
+export const listRootTasksDueOnDate = query({
+  args: { dayStartMs: v.number() },
+  handler: async (ctx, args) => {
     const now = Date.now()
-    const todayStart = startOfDayUTC(now)
     const rootTasks = await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
       .order('desc')
       .collect()
-    return rootTasks.filter((task) => isTaskDueToday(task, todayStart))
+    return rootTasks.filter((task) =>
+      isTaskDueOnDay(task, args.dayStartMs, now),
+    )
   },
 })
 
-/** Root tasks due in the current week (Sun–Sat UTC). */
+/** Root tasks due in the week (Sun–Sat UTC) containing refDateMs, or current week if omitted. */
 export const listRootTasksDueInWeek = query({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now()
+  args: { refDateMs: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const now = args.refDateMs ?? Date.now()
     const { start, end } = getCurrentWeekRangeUTC(now)
     const rootTasks = await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
       .order('desc')
       .collect()
     return rootTasks.filter((task) =>
@@ -412,15 +409,15 @@ export const listRootTasksDueInWeek = query({
   },
 })
 
-/** Root tasks due in the current month (UTC). */
+/** Root tasks due in the month (UTC) containing refDateMs, or current month if omitted. */
 export const listRootTasksDueInMonth = query({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now()
+  args: { refDateMs: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const now = args.refDateMs ?? Date.now()
     const { start, end } = getCurrentMonthRangeUTC(now)
     const rootTasks = await ctx.db
       .query('tasks')
-      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", undefined))
       .order('desc')
       .collect()
     return rootTasks.filter((task) =>
@@ -433,6 +430,7 @@ export const createTask = mutation({
   args: {
     title: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
+    dueDate: v.optional(v.number()),
     repeatEnabled: v.optional(v.boolean()),
     frequency: v.optional(frequencyValidator),
   },
@@ -442,6 +440,7 @@ export const createTask = mutation({
       parentCategoryId: args.parentCategoryId,
       isCompleted: false,
       lastCompletedDate: undefined,
+      dueDate: args.dueDate,
       repeatEnabled: args.repeatEnabled ?? false,
       frequency: args.frequency,
     })
@@ -540,7 +539,7 @@ export const bulkCompleteCategory = mutation({
 
       const children = await ctx.db
         .query('categories')
-        .filter((q) => q.eq(q.field('parentCategoryId'), currentId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", currentId))
         .collect()
       for (const child of children) {
         if (!visited.has(child._id)) {
@@ -555,7 +554,7 @@ export const bulkCompleteCategory = mutation({
     for (const categoryId of categoryIds) {
       const tasks = await ctx.db
         .query('tasks')
-        .filter((q) => q.eq(q.field('parentCategoryId'), categoryId))
+        .withIndex('byParentCategoryId', q => q.eq("parentCategoryId", categoryId))
         .collect()
       const incompleteTasks = tasks.filter((task) => !task.isCompleted)
       if (incompleteTasks.length === 0) {

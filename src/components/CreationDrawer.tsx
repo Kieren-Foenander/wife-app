@@ -49,6 +49,7 @@ const CATEGORY_COLOR_OPTIONS: Array<{ value: string; label: string }> = [
 export type AddTaskParams = {
   title: string
   parentCategoryId?: Id<'categories'>
+  dueDate?: number
   repeatEnabled?: boolean
   frequency?: TaskFrequency
 }
@@ -57,6 +58,20 @@ export type AddCategoryParams = {
   name: string
   parentCategoryId?: Id<'categories'>
   color?: string
+}
+
+/** Format Date as YYYY-MM-DD for input[type="date"]. */
+function toDateInputValue(d: Date): string {
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Parse YYYY-MM-DD to UTC start-of-day ms. */
+function parseDateToUTCStartMs(s: string): number {
+  const [y, m = 1, d = 1] = s.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
 }
 
 type CreationDrawerProps = {
@@ -68,6 +83,8 @@ type CreationDrawerProps = {
   onAddTask: (params: AddTaskParams) => Promise<void>
   /** Title shown in drawer header. */
   title?: string
+  /** Default due date for new tasks (e.g. selected day on index). */
+  defaultDueDate?: Date
 }
 
 export function CreationDrawer({
@@ -77,6 +94,7 @@ export function CreationDrawer({
   onAddCategory,
   onAddTask,
   title = 'Create category or task',
+  defaultDueDate,
 }: CreationDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('category')
   const [categoryName, setCategoryName] = useState('')
@@ -84,6 +102,7 @@ export function CreationDrawer({
   const [categoryColor, setCategoryColor] = useState<string>('')
   const [taskTitle, setTaskTitle] = useState('')
   const [taskParentId, setTaskParentId] = useState<Id<'categories'> | ''>('')
+  const [taskDueDate, setTaskDueDate] = useState<string>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
   const categoriesForPicker = useQuery(api.todos.listCategoriesForParentPicker)
@@ -92,8 +111,11 @@ export function CreationDrawer({
     if (open) {
       setTaskParentId(parentCategoryId ?? '')
       setCategoryParentId(parentCategoryId ?? '')
+      setTaskDueDate(
+        toDateInputValue(defaultDueDate ?? new Date()),
+      )
     }
-  }, [open, parentCategoryId])
+  }, [open, parentCategoryId, defaultDueDate])
 
   const handleCategorySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -114,6 +136,7 @@ export function CreationDrawer({
     await onAddTask({
       title: trimmed,
       parentCategoryId: taskParentId || undefined,
+      dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : undefined,
       repeatEnabled,
       frequency: repeatEnabled && taskFrequency ? taskFrequency : undefined,
     })
@@ -293,6 +316,22 @@ export function CreationDrawer({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="task-due-date"
+                  className="mb-2 block text-sm font-medium text-slate-300"
+                >
+                  Due date
+                </label>
+                <input
+                  type="date"
+                  id="task-due-date"
+                  value={taskDueDate}
+                  onChange={(e) => setTaskDueDate(e.target.value)}
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  aria-label="Due date"
+                />
               </div>
               <div className="flex items-center gap-3">
                 <input

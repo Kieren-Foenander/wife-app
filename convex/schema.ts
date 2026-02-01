@@ -18,7 +18,7 @@ export default defineSchema({
     name: v.string(),
     parentCategoryId: v.optional(v.id('categories')),
     color: v.optional(v.string()),
-  }),
+  }).index('byParentCategoryId', ['parentCategoryId']),
   products: defineTable({
     title: v.string(),
     imageId: v.string(),
@@ -29,9 +29,10 @@ export default defineSchema({
     parentCategoryId: v.optional(v.id('categories')),
     isCompleted: v.optional(v.boolean()),
     lastCompletedDate: v.optional(v.number()),
+    dueDate: v.optional(v.number()),
     repeatEnabled: v.optional(v.boolean()),
     frequency: v.optional(frequencyValidator),
-  }),
+  }).index('byParentCategoryId', ['parentCategoryId']),
   todos: defineTable({
     text: v.string(),
     completed: v.boolean(),

@@ -12,6 +12,8 @@ Non-standard commands:
 - `pnpm feedback` - Runs typecheck, convex:check, test, and lint (Ralph feedback loops)
 - `pnpm e2e` - Playwright e2e tests (starts dev server, runs e2e/; use for UI verification in Ralph)
 
-For React patterns and conventions, see `docs/REACT.md`. For Convex conventions, see `.cursorrules`. For running a Ralph loop with Cursor Agent CLI, see `docs/RALPH.md`.
+For React patterns and conventions, see `docs/REACT.md`. For Convex patterns and conventions, see `docs/convex.md`. For running a Ralph loop with Cursor Agent CLI, see `docs/RALPH.md`.
+
+**Convex indexes**: Queries that filter or order must use indexes. Filtering without an index = full table scan = huge read bandwidth; we’ve been blocked for hundreds of thousands of unindexed reads. When adding queries, define indexes in `convex/schema.ts` for every field (or field combination) you filter/order on; never rely on in-memory filtering of full-table results.
 
 Be extremely concise. Sacrifice grammar for the sake of concision.

@@ -273,4 +273,56 @@ test.describe('Daily view smoke', () => {
     await expect(breadcrumb).toContainText(rootCategoryName)
     await expect(breadcrumb).toContainText(childCategoryName)
   })
+
+  test('selecting a day in week view shows that day and task creation uses it as due date', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    await page.goto('/')
+    await page.getByRole('tab', { name: 'Week' }).click()
+    await expect(page.getByRole('region', { name: 'Week' })).toBeVisible()
+    const weekRegion = page.getByRole('region', { name: 'Week' })
+    const dayButtons = weekRegion.getByRole('button')
+    await expect(dayButtons.first()).toBeVisible()
+    const count = await dayButtons.count()
+    expect(count).toBeGreaterThanOrEqual(2)
+    const secondDay = dayButtons.nth(1)
+    const ariaLabel = await secondDay.getAttribute('aria-label')
+    expect(ariaLabel).toBeTruthy()
+    await secondDay.click()
+    await expect(page).toHaveURL(/\?.*date=\d{4}-\d{2}-\d{2}/)
+    await expect(page).toHaveURL(/\?.*view=day/)
+    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+
+    const taskTitle = `Due on selected day ${Date.now()}`
+    await page.getByRole('button', { name: 'Create' }).click()
+    const drawer = page.getByRole('dialog', { name: /create category or task/i })
+    await drawer.getByRole('tab', { name: 'New Task' }).click()
+    await expect(drawer.getByLabel('Due date')).toBeVisible()
+    await drawer.getByPlaceholder(/pay rent/i).fill(taskTitle)
+    await drawer.getByRole('button', { name: 'Add task' }).click()
+    await expect(drawer).not.toBeVisible()
+    await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
+  })
+
+  test('creation drawer task form has due date field defaulting to selected day', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Create' }).click()
+    const drawer = page.getByRole('dialog', { name: /create category or task/i })
+    await drawer.getByRole('tab', { name: 'New Task' }).click()
+    const dueDateInput = drawer.getByLabel('Due date')
+    await expect(dueDateInput).toBeVisible()
+    await expect(dueDateInput).toHaveAttribute('type', 'date')
+    const value = await dueDateInput.inputValue()
+    const today = new Date()
+    const expected =
+      today.getUTCFullYear() +
+      '-' +
+      String(today.getUTCMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getUTCDate()).padStart(2, '0')
+    expect(value).toBe(expected)
+  })
 })
