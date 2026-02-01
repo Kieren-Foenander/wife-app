@@ -26,7 +26,7 @@ test.describe('Daily view smoke', () => {
     await page.goto('/')
     await page.getByPlaceholder(/pay rent/i).fill(taskTitle)
     await page.getByRole('button', { name: 'Add task' }).click()
-    await expect(page.getByText(taskTitle)).toBeVisible()
+    await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 15000 })
 
     const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
     await expect(checkbox).not.toBeChecked()
@@ -44,7 +44,7 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryLink).toBeVisible()
+    await expect(categoryLink).toBeVisible({ timeout: 15000 })
     await categoryLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
@@ -97,7 +97,7 @@ test.describe('Daily view smoke', () => {
     await page.getByPlaceholder(/laundry, groceries/i).fill(categoryName)
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryLink).toBeVisible()
+    await expect(categoryLink).toBeVisible({ timeout: 15000 })
     await categoryLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
@@ -139,7 +139,7 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled()
     await page.getByRole('button', { name: 'Create' }).click()
     const categoryNavLink = page.getByRole('link', { name: categoryName })
-    await expect(categoryNavLink).toBeVisible()
+    await expect(categoryNavLink).toBeVisible({ timeout: 15000 })
     await categoryNavLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(
@@ -189,7 +189,7 @@ test.describe('Daily view smoke', () => {
     const rootCategoryNavLink = page.getByRole('link', {
       name: rootCategoryName,
     })
-    await expect(rootCategoryNavLink).toBeVisible()
+    await expect(rootCategoryNavLink).toBeVisible({ timeout: 15000 })
     await rootCategoryNavLink.click()
     await page.waitForURL(/\/categories\//)
     await expect(

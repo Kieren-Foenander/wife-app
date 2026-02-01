@@ -37,7 +37,7 @@ function DailyView() {
   const deleteTask = useMutation(api.todos.deleteTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const categories = useQuery(api.todos.listCategories)
-  const rootTasks = useQuery(api.todos.listRootTasks)
+  const rootTasks = useQuery(api.todos.listRootTasksDueToday)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -326,7 +326,7 @@ function DailyView() {
               <p className="text-sm text-slate-500">Loading tasks...</p>
             ) : rootTasks.length === 0 ? (
               <p className="text-sm text-slate-500">
-                No uncategorized tasks yet.
+                No tasks due today.
               </p>
             ) : (
               <ul className="space-y-2">
