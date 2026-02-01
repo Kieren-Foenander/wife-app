@@ -365,9 +365,25 @@ export const toggleTaskCompletion = mutation({
       throw new Error('Task not found')
     }
     const nextCompleted = !task.isCompleted
+    const isRecurring =
+      task.repeatEnabled === true && task.frequency != null
+
+    if (nextCompleted) {
+      if (isRecurring) {
+        // Recurring: set lastCompletedDate so task drops off today and reappears next interval; keep unchecked for next period
+        return await ctx.db.patch(args.id, {
+          lastCompletedDate: Date.now(),
+          isCompleted: false,
+        })
+      }
+      return await ctx.db.patch(args.id, {
+        isCompleted: true,
+        lastCompletedDate: undefined,
+      })
+    }
     return await ctx.db.patch(args.id, {
-      isCompleted: nextCompleted,
-      lastCompletedDate: nextCompleted ? Date.now() : undefined,
+      isCompleted: false,
+      lastCompletedDate: undefined,
     })
   },
 })
@@ -416,9 +432,11 @@ export const bulkCompleteCategory = mutation({
         continue
       }
       for (const task of incompleteTasks) {
+        const isRecurring =
+          task.repeatEnabled === true && task.frequency != null
         await ctx.db.patch(task._id, {
-          isCompleted: true,
           lastCompletedDate: completedAt,
+          isCompleted: isRecurring ? false : true,
         })
         updated += 1
       }

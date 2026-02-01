@@ -55,7 +55,7 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] Frequency enum: Validated options (daily, bi-daily, weekly, fortnightly, monthly, quarterly, 6-monthly, yearly)
 - [x] Next due logic: Compute whether task is due on Daily view from lastCompletedDate and frequency
 - [x] Daily view filtering: Only show tasks due for today in daily view
-- [ ] Completion updates: On completing recurring task, update lastCompletedDate; task reappears next interval
+- [x] Completion updates: On completing recurring task, update lastCompletedDate; task reappears next interval
 
 ## Phase 5: View modes (Daily/Weekly/Monthly)
 
