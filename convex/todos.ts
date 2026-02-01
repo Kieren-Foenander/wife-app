@@ -158,6 +158,30 @@ export const listCategories = query({
   },
 })
 
+/** Categories in tree order (root then children) with depth for parent dropdown. */
+export const listCategoriesForParentPicker = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query('categories').collect()
+    const byParent = new Map<Id<'categories'> | undefined, typeof all>()
+    for (const c of all) {
+      const key = c.parentCategoryId
+      if (!byParent.has(key)) byParent.set(key, [])
+      byParent.get(key)!.push(c)
+    }
+    const out: Array<{ _id: Id<'categories'>; name: string; depth: number }> = []
+    function visit(parentId: Id<'categories'> | undefined, depth: number) {
+      const children = byParent.get(parentId) ?? []
+      for (const c of children) {
+        out.push({ _id: c._id, name: c.name, depth })
+        visit(c._id, depth + 1)
+      }
+    }
+    visit(undefined, 0)
+    return out
+  },
+})
+
 export const getCategory = query({
   args: { id: v.id('categories') },
   handler: async (ctx, args) => {

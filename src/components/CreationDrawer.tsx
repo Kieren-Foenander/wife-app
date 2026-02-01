@@ -84,7 +84,7 @@ export function CreationDrawer({
   const [taskParentId, setTaskParentId] = useState<Id<'categories'> | ''>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
-  const categories = useQuery(api.todos.listCategories)
+  const categoriesForPicker = useQuery(api.todos.listCategoriesForParentPicker)
 
   useEffect(() => {
     if (open) {
@@ -198,9 +198,9 @@ export function CreationDrawer({
                   aria-label="Parent category"
                 >
                   <option value="">None (root)</option>
-                  {categories?.map((c) => (
+                  {categoriesForPicker?.map((c) => (
                     <option key={c._id} value={c._id}>
-                      {c.name}
+                      {'\u00A0'.repeat(c.depth * 2)}{c.depth > 0 ? '— ' : ''}{c.name}
                     </option>
                   ))}
                 </select>
@@ -269,9 +269,9 @@ export function CreationDrawer({
                   aria-label="Parent category"
                 >
                   <option value="">None (root)</option>
-                  {categories?.map((c) => (
+                  {categoriesForPicker?.map((c) => (
                     <option key={c._id} value={c._id}>
-                      {c.name}
+                      {'\u00A0'.repeat(c.depth * 2)}{c.depth > 0 ? '— ' : ''}{c.name}
                     </option>
                   ))}
                 </select>
