@@ -193,7 +193,15 @@ function DailyView() {
   const deleteTask = useMutation(api.todos.deleteTask)
   const toggleTaskCompletion = useMutation(api.todos.toggleTaskCompletion)
   const categories = useQuery(api.todos.listCategories)
-  const rootTasks = useQuery(api.todos.listRootTasksDueToday)
+  const rootTasksDueToday = useQuery(api.todos.listRootTasksDueToday)
+  const rootTasksDueInWeek = useQuery(api.todos.listRootTasksDueInWeek)
+  const rootTasksDueInMonth = useQuery(api.todos.listRootTasksDueInMonth)
+  const rootTasks =
+    view === 'week'
+      ? rootTasksDueInWeek
+      : view === 'month'
+        ? rootTasksDueInMonth
+        : rootTasksDueToday
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -510,13 +518,23 @@ function DailyView() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100">Your tasks</h2>
+          <h2 className="text-lg font-semibold text-slate-100">
+            {view === 'day'
+              ? 'Your tasks'
+              : view === 'week'
+                ? 'Tasks due this week'
+                : 'Tasks due this month'}
+          </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             {rootTasks === undefined ? (
               <p className="text-sm text-slate-500">Loading tasks...</p>
             ) : rootTasks.length === 0 ? (
               <p className="text-sm text-slate-500">
-                No tasks due today.
+                {view === 'day'
+                  ? 'No tasks due today.'
+                  : view === 'week'
+                    ? 'No tasks due this week.'
+                    : 'No tasks due this month.'}
               </p>
             ) : (
               <ul className="space-y-2">

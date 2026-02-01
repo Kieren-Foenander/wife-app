@@ -88,6 +88,69 @@ export function isTaskDueToday(
   return nextDue <= todayEndMs
 }
 
+/** Next due date (start of day UTC ms) for a task. Recurring: next interval after lastCompleted; never completed = today. Non-recurring: treated as today if incomplete. */
+function getNextDueMs(
+  task: {
+    isCompleted?: boolean
+    lastCompletedDate?: number
+    repeatEnabled?: boolean
+    frequency?: Frequency
+  },
+  nowMs: number,
+): number {
+  const isRecurring =
+    task.repeatEnabled === true && task.frequency != null
+  const todayStart = startOfDayUTC(nowMs)
+  if (!isRecurring) {
+    return todayStart
+  }
+  if (task.lastCompletedDate == null) {
+    return todayStart
+  }
+  return nextDueAfter(task.lastCompletedDate, task.frequency!)
+}
+
+/** Whether a task is due within [rangeStartMs, rangeEndMs] (UTC, inclusive). Non-recurring: due if not completed. */
+function isTaskDueInRange(
+  task: {
+    isCompleted?: boolean
+    lastCompletedDate?: number
+    repeatEnabled?: boolean
+    frequency?: Frequency
+  },
+  rangeStartMs: number,
+  rangeEndMs: number,
+  nowMs: number,
+): boolean {
+  const isRecurring =
+    task.repeatEnabled === true && task.frequency != null
+  if (!isRecurring) {
+    return !task.isCompleted
+  }
+  const nextDue = getNextDueMs(task, nowMs)
+  return nextDue >= rangeStartMs && nextDue <= rangeEndMs
+}
+
+/** Current week Sun 00:00 UTC to Sat 23:59:59.999 UTC. */
+function getCurrentWeekRangeUTC(nowMs: number): { start: number; end: number } {
+  const d = new Date(nowMs)
+  const day = d.getUTCDay()
+  const start = startOfDayUTC(nowMs) - day * MS_PER_DAY
+  const end = start + 7 * MS_PER_DAY - 1
+  return { start, end }
+}
+
+/** Current month 1st 00:00 UTC to last day 23:59:59.999 UTC. */
+function getCurrentMonthRangeUTC(nowMs: number): { start: number; end: number } {
+  const d = new Date(nowMs)
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth()
+  const start = Date.UTC(y, m, 1)
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  const end = Date.UTC(y, m, lastDay, 23, 59, 59, 999)
+  return { start, end }
+}
+
 export const listCategories = query({
   args: {},
   handler: async (ctx) => {
@@ -296,6 +359,40 @@ export const listRootTasksDueToday = query({
       .order('desc')
       .collect()
     return rootTasks.filter((task) => isTaskDueToday(task, todayStart))
+  },
+})
+
+/** Root tasks due in the current week (Sun–Sat UTC). */
+export const listRootTasksDueInWeek = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const { start, end } = getCurrentWeekRangeUTC(now)
+    const rootTasks = await ctx.db
+      .query('tasks')
+      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .order('desc')
+      .collect()
+    return rootTasks.filter((task) =>
+      isTaskDueInRange(task, start, end, now),
+    )
+  },
+})
+
+/** Root tasks due in the current month (UTC). */
+export const listRootTasksDueInMonth = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const { start, end } = getCurrentMonthRangeUTC(now)
+    const rootTasks = await ctx.db
+      .query('tasks')
+      .filter((q) => q.eq(q.field('parentCategoryId'), undefined))
+      .order('desc')
+      .collect()
+    return rootTasks.filter((task) =>
+      isTaskDueInRange(task, start, end, now),
+    )
   },
 })
 
