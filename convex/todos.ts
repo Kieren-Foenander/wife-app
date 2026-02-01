@@ -47,6 +47,17 @@ export const listTasks = query({
   },
 })
 
+export const listRootTasks = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query('tasks')
+      .filter((q) => q.eq(q.field('categoryId'), undefined))
+      .order('desc')
+      .collect()
+  },
+})
+
 export const createTask = mutation({
   args: { title: v.string() },
   handler: async (ctx, args) => {

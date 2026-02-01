@@ -25,6 +25,7 @@ function DailyView() {
   const updateCategory = useMutation(api.todos.updateCategory)
   const deleteCategory = useMutation(api.todos.deleteCategory)
   const categories = useQuery(api.todos.listCategories)
+  const rootTasks = useQuery(api.todos.listRootTasks)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -244,6 +245,30 @@ function DailyView() {
                     </li>
                   )
                 })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-100">Your tasks</h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+            {rootTasks === undefined ? (
+              <p className="text-sm text-slate-500">Loading tasks...</p>
+            ) : rootTasks.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No uncategorized tasks yet.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {rootTasks.map((task) => (
+                  <li
+                    key={task._id}
+                    className="rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100"
+                  >
+                    {task.title}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
