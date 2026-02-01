@@ -352,7 +352,7 @@ function DailyView() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16">
+      <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
         <header className="space-y-4">
           <div
             className="inline-flex rounded-xl border border-slate-800 bg-slate-900/60 p-1"
@@ -403,6 +403,7 @@ function DailyView() {
           <Button
             className="w-full sm:w-auto"
             onClick={() => setDrawerOpen(true)}
+            aria-label="Open create drawer to add category or task"
           >
             Create
           </Button>
@@ -460,6 +461,7 @@ function DailyView() {
                               }))
                             }
                             className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                            aria-label="Rename category"
                           />
                           <div className="flex items-center gap-2">
                             <Button
@@ -472,6 +474,7 @@ function DailyView() {
                               onClick={() =>
                                 saveEditing(category._id, category.name)
                               }
+                              aria-label="Save category name"
                             >
                               Save
                             </Button>
@@ -480,6 +483,7 @@ function DailyView() {
                               variant="secondary"
                               className="h-9 px-4"
                               onClick={() => cancelEditing(category._id)}
+                              aria-label="Cancel renaming category"
                             >
                               Cancel
                             </Button>
@@ -508,6 +512,7 @@ function DailyView() {
                               onClick={() =>
                                 startEditing(category._id, category.name)
                               }
+                              aria-label={`Rename category ${category.name}`}
                             >
                               Rename
                             </Button>
@@ -516,6 +521,7 @@ function DailyView() {
                               variant="destructive"
                               className="h-9 px-4"
                               onClick={() => handleDelete(category._id)}
+                              aria-label={`Delete category ${category.name}`}
                             >
                               Delete
                             </Button>
@@ -591,6 +597,7 @@ function DailyView() {
                               }))
                             }
                             className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                            aria-label="Rename task"
                           />
                           <div className="flex items-center gap-2">
                             <Button
@@ -603,6 +610,7 @@ function DailyView() {
                               onClick={() =>
                                 saveTaskEditing(task._id, task.title)
                               }
+                              aria-label="Save task title"
                             >
                               Save
                             </Button>
@@ -611,6 +619,7 @@ function DailyView() {
                               variant="secondary"
                               className="h-9 px-4"
                               onClick={() => cancelTaskEditing(task._id)}
+                              aria-label="Cancel renaming task"
                             >
                               Cancel
                             </Button>
@@ -646,6 +655,7 @@ function DailyView() {
                               onClick={() =>
                                 startTaskEditing(task._id, task.title)
                               }
+                              aria-label={`Rename task ${task.title}`}
                             >
                               Rename
                             </Button>
@@ -654,6 +664,7 @@ function DailyView() {
                               variant="destructive"
                               className="h-9 px-4"
                               onClick={() => handleTaskDelete(task._id)}
+                              aria-label={`Delete task ${task.title}`}
                             >
                               Delete
                             </Button>
@@ -667,7 +678,7 @@ function DailyView() {
             )}
           </div>
         </section>
-      </div>
+      </main>
     </div>
   )
 }

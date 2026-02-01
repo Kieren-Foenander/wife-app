@@ -54,6 +54,11 @@ export function CategoryCompletionIndicator({
     <div
       className="flex items-center gap-3 text-xs text-slate-400"
       data-testid="category-completion"
+      role="progressbar"
+      aria-valuenow={progress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${completed} of ${total} tasks completed`}
     >
       <div className="h-1 w-20 overflow-hidden rounded-full bg-slate-800">
         <div

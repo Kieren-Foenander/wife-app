@@ -152,9 +152,9 @@ function CategoryDetail() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16">
+      <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Category detail">
         <header className="space-y-3">
-          <Button asChild variant="secondary" className="h-9 w-fit px-4">
+          <Button asChild variant="secondary" className="h-9 w-fit px-4" aria-label="Back to Daily view">
             <Link to="/" search={{ view: 'day' }}>Back to Daily</Link>
           </Button>
           {ancestors === undefined || category === undefined ? (
@@ -163,7 +163,7 @@ function CategoryDetail() {
               Loading path...
             </div>
           ) : (
-            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400" aria-label="Breadcrumb">
               <Link to="/" search={{ view: 'day' }} className="hover:text-slate-200">
                 Daily
               </Link>
@@ -208,6 +208,7 @@ function CategoryDetail() {
                   className="h-9 w-fit px-4"
                   onClick={handleBulkComplete}
                   disabled={!hasIncompleteDescendants || isBulkCompleting}
+                  aria-label={isBulkCompleting ? 'Completing all tasks' : 'Complete all tasks in this category'}
                 >
                   {isBulkCompleting ? 'Completing...' : 'Complete all tasks'}
                 </Button>
@@ -224,6 +225,7 @@ function CategoryDetail() {
           <Button
             className="w-full sm:w-auto"
             onClick={() => setDrawerOpen(true)}
+            aria-label="Open drawer to add category or task"
           >
             Add category or task
           </Button>
@@ -348,7 +350,7 @@ function CategoryDetail() {
             )}
           </div>
         </section>
-      </div>
+      </main>
     </div>
   )
 }

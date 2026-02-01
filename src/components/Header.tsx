@@ -43,7 +43,7 @@ export default function Header() {
           </button>
         </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-4 overflow-y-auto" aria-label="Main navigation">
           <Link
             to="/"
             search={{ view: 'day' }}

@@ -347,7 +347,7 @@ export function CreationDrawer({
         </div>
         <DrawerFooter className="flex-row justify-end border-t border-slate-800 pt-4">
           <DrawerClose asChild>
-            <Button variant="secondary">Close</Button>
+            <Button variant="secondary" aria-label="Close drawer">Close</Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

@@ -85,4 +85,4 @@ Target User: Individuals needing to manage recurring responsibilities (e.g., hom
 - [x] Empty states: Empty state messaging for lists
 - [x] Error handling: Error toasts for failed mutations
 - [x] Loading states: Spinners/skeletons during fetch
-- [ ] Accessibility pass: Buttons/checkboxes labeled; basic a11y audit
+- [x] Accessibility pass: Buttons/checkboxes labeled; basic a11y audit
