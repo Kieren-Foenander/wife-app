@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { CategoryCompletionIndicator } from '../../components/CategoryCompletionIndicator'
 import { CreationDrawer } from '../../components/CreationDrawer'
+import type { AddTaskParams } from '../../components/CreationDrawer'
 import { Button } from '../../components/ui/button'
 import { ListRowSkeleton } from '../../components/ui/skeleton'
 import { Spinner } from '../../components/ui/spinner'
@@ -85,20 +86,13 @@ function CategoryDetail() {
     }
   }
 
-  const handleAddTask = async (params: {
-    title: string
-    parentCategoryId?: Id<'categories'>
-    dueDate?: number
-    repeatEnabled?: boolean
-    frequency?: 'daily' | 'bi-daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6-monthly' | 'yearly'
-  }) => {
+  const handleAddTask = async (params: AddTaskParams) => {
     try {
       await createTask({
         title: params.title,
-        parentCategoryId: params.parentCategoryId ?? (categoryId as Id<'categories'>),
         dueDate: params.dueDate,
-        repeatEnabled: params.repeatEnabled,
         frequency: params.frequency,
+        parentTaskId: params.parentTaskId,
       })
       setDrawerOpen(false)
     } catch (error) {
@@ -234,10 +228,8 @@ function CategoryDetail() {
           <CreationDrawer
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
-            parentCategoryId={categoryId as Id<'categories'>}
-            onAddCategory={handleAddCategory}
             onAddTask={handleAddTask}
-            title="Add child category or task"
+            title="Add task"
             defaultDueDate={new Date()}
           />
         </div>
@@ -322,8 +314,8 @@ function CategoryDetail() {
                     <li
                       key={task._id}
                       className={`flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === task._id
-                          ? 'animate-completion-bounce'
-                          : ''
+                        ? 'animate-completion-bounce'
+                        : ''
                         }`}
                     >
                       <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />

@@ -114,13 +114,12 @@ function WeekStrip({
               type="button"
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
-              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${
-                isSelected
+              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${isSelected
                   ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
                   : isToday
                     ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
                     : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
-              }`}
+                }`}
               aria-label={d.toLocaleDateString('en-US', {
                 weekday: 'long',
                 month: 'short',
@@ -206,13 +205,12 @@ function MonthGrid({
               type="button"
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${
-                isSelected
+              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
                   ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
                   : isToday
                     ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
                     : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
-              }`}
+                }`}
               aria-label={d.toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -263,9 +261,8 @@ function TaskRow({
 
   return (
     <li
-      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${
-        celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
-      }`}
+      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
+        }`}
     >
       {editingTaskId === task._id ? (
         <>
@@ -310,9 +307,8 @@ function TaskRow({
             />
             <a
               href={`/tasks/${task._id}`}
-              className={`flex-1 truncate text-left ${
-                isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
-              }`}
+              className={`flex-1 truncate text-left ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
+                }`}
             >
               {task.title}
             </a>
@@ -509,11 +505,10 @@ function DailyView() {
                 role="tab"
                 aria-selected={view === mode}
                 onClick={() => navigate({ search: { view: mode } })}
-                className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                  view === mode
+                className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${view === mode
                     ? 'bg-slate-700 text-slate-100'
                     : 'text-slate-400 hover:text-slate-200'
-                }`}
+                  }`}
               >
                 {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
               </button>
@@ -525,11 +520,11 @@ function DailyView() {
                 ? toYYYYMMDDUTC(selectedDate) === toYYYYMMDDUTC(new Date())
                   ? `Today - ${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}`
                   : selectedDate.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
                 : view === 'week'
                   ? 'Weekly'
                   : 'Monthly'}
@@ -580,7 +575,6 @@ function DailyView() {
           <CreationDrawer
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
-            onAddCategory={async () => {}}
             onAddTask={handleAddTask}
             title="Add task"
             defaultDueDate={selectedDate}
