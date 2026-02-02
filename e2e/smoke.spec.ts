@@ -11,6 +11,7 @@ test.describe('Daily view smoke', () => {
     await expect(
       page.getByRole('heading', { name: 'Tasks', level: 1 }),
     ).toBeVisible()
+    await expect(page.getByText('Wife App')).toBeVisible()
     await expect(page.getByText(/Today - \w+/)).toBeVisible()
   })
 

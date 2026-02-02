@@ -551,6 +551,9 @@ function DailyView() {
     <div className="min-h-screen bg-background text-foreground">
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
         <header className="space-y-4">
+          <p className="text-center text-xs font-semibold text-muted-foreground">
+            Wife App
+          </p>
           <div
             className="inline-flex rounded-xl border border-border bg-card/70 p-1"
             role="tablist"
