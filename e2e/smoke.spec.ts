@@ -314,6 +314,29 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByText(/Today - \w+/)).not.toBeVisible()
   })
 
+  test('today reset button clears selection back to today', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: 'Week' }).click()
+    const weekRegion = page.getByRole('region', { name: 'Week' })
+    const nonTodayButton = weekRegion.locator(
+      'button:not(:has-text("Today"))',
+    ).first()
+    await expect(nonTodayButton).toBeVisible()
+    await nonTodayButton.click()
+    await expect(page).toHaveURL(/\?.*date=\d{4}-\d{2}-\d{2}/)
+    const resetButton = page.getByRole('button', { name: 'Jump to today' })
+    await expect(resetButton).toBeVisible()
+    await resetButton.click()
+    await expect(resetButton).not.toBeVisible()
+    await expect(page).toHaveURL(/\?.*view=week/)
+    await expect(page).not.toHaveURL(/\bdate=/)
+
+    await page.getByRole('tab', { name: 'Day' }).click()
+    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+    await expect(page.getByText(/Today - \w+/)).toBeVisible()
+    await expect(page).not.toHaveURL(/\bdate=/)
+  })
+
   test('creation drawer task form has due date field defaulting to selected day', async ({
     page,
   }) => {

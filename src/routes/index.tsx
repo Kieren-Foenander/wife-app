@@ -537,6 +537,16 @@ function DailyView() {
     })
   }
 
+  const handleResetToday = () => {
+    setPendingScrollTo(view === 'day' ? null : todayStartMs)
+    navigate({
+      search: {
+        view,
+        date: undefined,
+      },
+    })
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
@@ -765,6 +775,16 @@ function DailyView() {
           </div>
         </section>
       </main>
+      {!isSelectedToday ? (
+        <Button
+          type="button"
+          className="fixed bottom-6 right-6 z-20 h-12 rounded-full px-5 text-base shadow-lg"
+          onClick={handleResetToday}
+          aria-label="Jump to today"
+        >
+          Today
+        </Button>
+      ) : null}
     </div>
   )
 }
