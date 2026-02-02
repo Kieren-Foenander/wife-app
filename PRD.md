@@ -36,7 +36,7 @@ Target user: People managing repeatable household routines who want a simple, lo
 - [x] Subtask drawer: only show within task detail; auto-set parent.
 - [x] Completion UI: keep completed tasks visible with strike-through.
 - [x] Completion sync: parent<->subtasks auto-propagation.
-- [ ] Week/Month day click: scroll within view, do not switch view.
+- [x] Week/Month day click: scroll within view, do not switch view.
 - [ ] Selected day state: clicking a day sets day state for Day view; reset on Today.
 - [ ] Today reset: floating button to jump back to today.
 - [ ] Pastel theme: apply palette to components, not just tokens.

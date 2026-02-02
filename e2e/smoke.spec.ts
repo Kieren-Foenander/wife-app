@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import type { Locator } from '@playwright/test'
+
+async function waitForDueDate(drawer: Locator) {
+  await expect(drawer.getByLabel('Due date')).toHaveValue(/\d{4}-\d{2}-\d{2}/)
+}
 
 test.describe('Daily view smoke', () => {
   test('app loads and shows Daily view', async ({ page }) => {
@@ -50,7 +55,11 @@ test.describe('Daily view smoke', () => {
     const drawer = page.getByRole('dialog', { name: 'Add task' })
     await expect(drawer).toBeVisible()
     await drawer.getByPlaceholder(/pay rent/i).fill(taskTitle)
-    await drawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(drawer)
+    await drawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
+    await expect(drawer).not.toBeVisible({ timeout: 45000 })
     await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
 
     const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
@@ -73,7 +82,10 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add task' }).click()
     const rootDrawer = page.getByRole('dialog', { name: 'Add task' })
     await rootDrawer.getByPlaceholder(/pay rent/i).fill(rootTaskName)
-    await rootDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(rootDrawer)
+    await rootDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     const taskLink = page.getByRole('link', { name: rootTaskName })
     await expect(taskLink).toBeVisible({ timeout: 45000 })
     await taskLink.click()
@@ -89,7 +101,10 @@ test.describe('Daily view smoke', () => {
     await expect(parentField).toBeDisabled()
     await expect(parentField).toHaveValue(rootTaskName)
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
-    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(subTaskDrawer)
+    await subTaskDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await expect(page.getByRole('link', { name: taskOne })).toBeVisible()
 
     const taskCheckbox = page.getByLabel(`Mark ${taskOne} complete`)
@@ -114,7 +129,10 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add task' }).click()
     const rootDrawer = page.getByRole('dialog', { name: 'Add task' })
     await rootDrawer.getByPlaceholder(/pay rent/i).fill(rootTaskName)
-    await rootDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(rootDrawer)
+    await rootDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     const taskLink = page.getByRole('link', { name: rootTaskName })
     await expect(taskLink).toBeVisible({ timeout: 45000 })
     await taskLink.click()
@@ -123,11 +141,17 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add sub-task' }).click()
     let subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
-    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(subTaskDrawer)
+    await subTaskDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await page.getByRole('button', { name: 'Add sub-task' }).click()
     subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskTwo)
-    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(subTaskDrawer)
+    await subTaskDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
 
     const firstCheckbox = page.getByLabel(`Mark ${taskOne} complete`)
     const secondCheckbox = page.getByLabel(`Mark ${taskTwo} complete`)
@@ -160,7 +184,10 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add task' }).click()
     const rootDrawer = page.getByRole('dialog', { name: 'Add task' })
     await rootDrawer.getByPlaceholder(/pay rent/i).fill(rootTaskName)
-    await rootDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(rootDrawer)
+    await rootDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     const taskLink = page.getByRole('link', { name: rootTaskName })
     await expect(taskLink).toBeVisible({ timeout: 45000 })
     await taskLink.click()
@@ -172,11 +199,17 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add sub-task' }).click()
     let subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskA)
-    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(subTaskDrawer)
+    await subTaskDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await page.getByRole('button', { name: 'Add sub-task' }).click()
     subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskB)
-    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(subTaskDrawer)
+    await subTaskDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await expect(page.getByRole('link', { name: taskA })).toBeVisible()
     await expect(page.getByRole('link', { name: taskB })).toBeVisible()
 
@@ -197,7 +230,10 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('button', { name: 'Add task' }).click()
     const rootDrawer = page.getByRole('dialog', { name: 'Add task' })
     await rootDrawer.getByPlaceholder(/pay rent/i).fill(rootTaskName)
-    await rootDrawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(rootDrawer)
+    await rootDrawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     const taskNavLink = page.getByRole('link', { name: rootTaskName })
     await expect(taskNavLink).toBeVisible({ timeout: 45000 })
     await taskNavLink.click()
@@ -220,7 +256,7 @@ test.describe('Daily view smoke', () => {
     await expect(page.getByRole('link', { name: childTaskTitle })).toBeVisible()
   })
 
-  test('selecting a day in week view shows that day and task creation uses it as due date', async ({
+  test('selecting a day in week view keeps view and uses it for due date', async ({
     page,
   }) => {
     test.setTimeout(60_000)
@@ -233,19 +269,26 @@ test.describe('Daily view smoke', () => {
     const count = await dayButtons.count()
     expect(count).toBeGreaterThanOrEqual(2)
     const secondDay = dayButtons.nth(1)
-    const ariaLabel = await secondDay.getAttribute('aria-label')
-    expect(ariaLabel).toBeTruthy()
     await secondDay.click()
     await expect(page).toHaveURL(/\?.*date=\d{4}-\d{2}-\d{2}/)
-    await expect(page).toHaveURL(/\?.*view=day/)
-    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+    await expect(page).toHaveURL(/\?.*view=week/)
+    await expect(page.getByRole('tab', { name: 'Week', selected: true })).toBeVisible()
+    await expect(secondDay).toHaveAttribute('aria-pressed', 'true')
+    const currentUrl = new URL(page.url())
+    const selectedDate = currentUrl.searchParams.get('date')
+    expect(selectedDate).toBeTruthy()
 
     const taskTitle = `Due on selected day ${Date.now()}`
     await page.getByRole('button', { name: 'Add task' }).click()
     const drawer = page.getByRole('dialog', { name: 'Add task' })
     await expect(drawer.getByLabel('Due date')).toBeVisible()
+    const dueValue = await drawer.getByLabel('Due date').inputValue()
+    expect(dueValue).toBe(selectedDate)
     await drawer.getByPlaceholder(/pay rent/i).fill(taskTitle)
-    await drawer.getByRole('button', { name: 'Add task' }).click()
+    await waitForDueDate(drawer)
+    await drawer
+      .locator('form')
+      .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await expect(drawer).not.toBeVisible()
     await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
   })

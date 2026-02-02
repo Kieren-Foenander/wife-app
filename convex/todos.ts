@@ -477,6 +477,37 @@ export const listRootTasksDueOnDate = query({
   },
 })
 
+/** Root tasks due on each day (UTC) in the provided list. */
+export const listRootTasksDueByDay = query({
+  args: { dayStartMs: v.array(v.number()) },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const rootTasks = await ctx.db
+      .query('tasks')
+      .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
+      .order('desc')
+      .collect()
+    const withLatestCompletion = await Promise.all(
+      rootTasks.map(async (task) => ({
+        task,
+        latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
+        isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
+      })),
+    )
+    return args.dayStartMs.map((dayStartMs) => {
+      const tasks = withLatestCompletion
+        .filter(({ task, latestCompletedDate }) =>
+          isTaskDueOnDay(task, dayStartMs, now, latestCompletedDate),
+        )
+        .map(({ task, isCompleted }) => ({
+          ...task,
+          isCompleted,
+        }))
+      return { dayStartMs, tasks }
+    })
+  },
+})
+
 /** Root tasks due in the week (Sun–Sat UTC) containing refDateMs, or current week if omitted. */
 export const listRootTasksDueInWeek = query({
   args: { refDateMs: v.optional(v.number()) },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
@@ -70,6 +70,16 @@ function getMonthGridFor(selectedDate: Date): Array<Array<Date | null>> {
     grid.push(week)
   }
   return grid
+}
+
+/** Month dates (1..last day) for the given date; dates at midnight UTC. */
+function getMonthDatesFor(selectedDate: Date): Array<Date> {
+  const year = selectedDate.getUTCFullYear()
+  const month = selectedDate.getUTCMonth()
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  return Array.from({ length: daysInMonth }, (_, index) =>
+    new Date(Date.UTC(year, month, index + 1)),
+  )
 }
 
 function WeekStrip({
@@ -385,18 +395,35 @@ function DailyView() {
   const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
     dayStartMs,
   })
-  const rootTasksDueInWeek = useQuery(api.todos.listRootTasksDueInWeek, {
-    refDateMs: selectedDate.getTime(),
+  const dayStartMsList = useMemo(() => {
+    if (view === 'week') {
+      return getWeekDatesFor(selectedDate).map(startOfDayUTCFromDate)
+    }
+    if (view === 'month') {
+      return getMonthDatesFor(selectedDate).map(startOfDayUTCFromDate)
+    }
+    return [dayStartMs]
+  }, [dayStartMs, selectedDate, view])
+  const rootTasksByDay = useQuery(api.todos.listRootTasksDueByDay, {
+    dayStartMs: view === 'day' ? [] : dayStartMsList,
   })
-  const rootTasksDueInMonth = useQuery(api.todos.listRootTasksDueInMonth, {
-    refDateMs: selectedDate.getTime(),
-  })
-  const rootTasks =
-    view === 'week'
-      ? rootTasksDueInWeek
-      : view === 'month'
-        ? rootTasksDueInMonth
-        : rootTasksDueOnDate
+  const rootTasks = rootTasksDueOnDate ?? []
+  const hasAnyTasks =
+    rootTasksByDay?.some((section) => section.tasks.length > 0) ?? false
+  const todayStartMs = useMemo(
+    () => startOfDayUTCFromDate(new Date()),
+    [],
+  )
+  const daySectionRefs = useRef(new Map<number, HTMLElement>())
+  const [pendingScrollTo, setPendingScrollTo] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (pendingScrollTo == null || view === 'day') return
+    const node = daySectionRefs.current.get(pendingScrollTo)
+    if (!node) return
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setPendingScrollTo(null)
+  }, [pendingScrollTo, rootTasksByDay, view])
 
   const handleAddTask = async (params: {
     title: string
@@ -495,6 +522,17 @@ function DailyView() {
     }
   }
 
+  const handleSelectDay = (d: Date) => {
+    const nextDayStart = startOfDayUTCFromDate(d)
+    setPendingScrollTo(nextDayStart)
+    navigate({
+      search: {
+        view,
+        date: toYYYYMMDDUTC(d),
+      },
+    })
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
@@ -547,26 +585,12 @@ function DailyView() {
         {view === 'week' ? (
           <WeekStrip
             selectedDate={selectedDate}
-            onSelectDay={(d) =>
-              navigate({
-                search: {
-                  view: 'day',
-                  date: toYYYYMMDDUTC(d),
-                },
-              })
-            }
+            onSelectDay={handleSelectDay}
           />
         ) : view === 'month' ? (
           <MonthGrid
             selectedDate={selectedDate}
-            onSelectDay={(d) =>
-              navigate({
-                search: {
-                  view: 'day',
-                  date: toYYYYMMDDUTC(d),
-                },
-              })
-            }
+            onSelectDay={handleSelectDay}
           />
         ) : null}
 
@@ -597,7 +621,9 @@ function DailyView() {
                 : 'Tasks due this month'}
           </h2>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-            {rootTasks === undefined ? (
+            {(view === 'day'
+              ? rootTasksDueOnDate === undefined
+              : rootTasksByDay === undefined) ? (
               <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading tasks">
                 <Spinner aria-label="Loading tasks" size={24} />
                 <p className="text-sm text-slate-500">Loading tasks...</p>
@@ -607,16 +633,12 @@ function DailyView() {
                   ))}
                 </ul>
               </div>
-            ) : rootTasks.length === 0 ? (
+            ) : view === 'day' && rootTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
                 <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
                 <div className="space-y-1">
                   <p className="text-base font-medium text-slate-300">
-                    {view === 'day'
-                      ? 'No tasks due today'
-                      : view === 'week'
-                        ? 'No tasks due this week'
-                        : 'No tasks due this month'}
+                    No tasks due today
                   </p>
                   <p className="text-sm text-slate-500">
                     Add a task to see it here.
@@ -624,33 +646,114 @@ function DailyView() {
                 </div>
               </div>
             ) : (
-              <ul className="space-y-2">
-                {rootTasks.map((task) => {
-                  const draftTitle = draftTaskTitles[task._id] ?? ''
-                  const isCompleted =
-                    taskCompletionOverrides[task._id] ?? task.isCompleted
-                  return (
-                    <TaskRow
-                      key={task._id}
-                      task={task}
-                      editingTaskId={editingTaskId}
-                      draftTitle={draftTitle}
-                      setDraftTitle={(value) =>
-                        setDraftTaskTitles((prev) => ({
-                          ...prev,
-                          [task._id]: value,
-                        }))
-                      }
-                      isCompleted={isCompleted}
-                      celebratingTaskId={celebratingTaskId}
-                      startEditing={startTaskEditing}
-                      saveEditing={saveTaskEditing}
-                      cancelEditing={cancelTaskEditing}
-                      handleDelete={handleTaskDelete}
-                      handleComplete={handleTaskToggle}
-                    />
-                  )
-                })}
+              <ul className="space-y-6">
+                {view === 'day'
+                  ? rootTasks.map((task) => {
+                    const draftTitle = draftTaskTitles[task._id] ?? ''
+                    const isCompleted =
+                      taskCompletionOverrides[task._id] ?? task.isCompleted
+                    return (
+                      <TaskRow
+                        key={task._id}
+                        task={task}
+                        editingTaskId={editingTaskId}
+                        draftTitle={draftTitle}
+                        setDraftTitle={(value) =>
+                          setDraftTaskTitles((prev) => ({
+                            ...prev,
+                            [task._id]: value,
+                          }))
+                        }
+                        isCompleted={isCompleted}
+                        celebratingTaskId={celebratingTaskId}
+                        startEditing={startTaskEditing}
+                        saveEditing={saveTaskEditing}
+                        cancelEditing={cancelTaskEditing}
+                        handleDelete={handleTaskDelete}
+                        handleComplete={handleTaskToggle}
+                      />
+                    )
+                  })
+                  : rootTasksByDay?.map(
+                    ({ dayStartMs: sectionStartMs, tasks }) => {
+                    const sectionDate = new Date(sectionStartMs)
+                    const label = sectionDate.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                    const isToday = sectionStartMs === todayStartMs
+                    return (
+                      <li
+                        key={sectionStartMs}
+                        ref={(node) => {
+                          if (node) {
+                            daySectionRefs.current.set(sectionStartMs, node)
+                          } else {
+                            daySectionRefs.current.delete(sectionStartMs)
+                          }
+                        }}
+                        className="scroll-mt-24 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-100">
+                              {label}
+                            </h3>
+                            {isToday ? (
+                              <span className="rounded bg-slate-700 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-200">
+                                Today
+                              </span>
+                            ) : null}
+                          </div>
+                          <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                            {view === 'week' ? 'Week' : 'Month'}
+                          </span>
+                        </div>
+                        {tasks.length === 0 ? (
+                          <p className="text-sm text-slate-500">
+                            No tasks due.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {tasks.map((task) => {
+                              const draftTitle = draftTaskTitles[task._id] ?? ''
+                              const isCompleted =
+                                taskCompletionOverrides[task._id] ??
+                                task.isCompleted
+                              return (
+                                <TaskRow
+                                  key={`${sectionStartMs}-${task._id}`}
+                                  task={task}
+                                  editingTaskId={editingTaskId}
+                                  draftTitle={draftTitle}
+                                  setDraftTitle={(value) =>
+                                    setDraftTaskTitles((prev) => ({
+                                      ...prev,
+                                      [task._id]: value,
+                                    }))
+                                  }
+                                  isCompleted={isCompleted}
+                                  celebratingTaskId={celebratingTaskId}
+                                  startEditing={startTaskEditing}
+                                  saveEditing={saveTaskEditing}
+                                  cancelEditing={cancelTaskEditing}
+                                  handleDelete={handleTaskDelete}
+                                  handleComplete={handleTaskToggle}
+                                />
+                              )
+                    },
+                  )}
+                          </ul>
+                        )}
+                      </li>
+                    )
+                  })}
+                {!hasAnyTasks && view !== 'day' ? (
+                  <li className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-500">
+                    No tasks due this {view}.
+                  </li>
+                ) : null}
               </ul>
             )}
           </div>
