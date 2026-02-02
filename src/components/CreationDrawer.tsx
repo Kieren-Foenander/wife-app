@@ -105,20 +105,20 @@ export function CreationDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
       <DrawerContent
-        className="border-slate-800 bg-slate-950"
+        className="border-border bg-card"
         role="dialog"
         aria-label={title}
       >
         <DrawerHeader>
-          <DrawerTitle className="text-slate-100">{title}</DrawerTitle>
+          <DrawerTitle className="text-foreground">{title}</DrawerTitle>
         </DrawerHeader>
         <div className="flex flex-col gap-6 px-4 pb-4">
           <form
             onSubmit={handleTaskSubmit}
-            className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+            className="flex flex-col gap-4 rounded-xl border border-border bg-card/70 p-4"
           >
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-300">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Task title
               </label>
               <input
@@ -126,7 +126,7 @@ export function CreationDrawer({
                 value={taskTitle}
                 onChange={(e) => setTaskTitle(e.target.value)}
                 placeholder="Pay rent, Call mom"
-                className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                 aria-label="Task title"
               />
             </div>
@@ -134,7 +134,7 @@ export function CreationDrawer({
               <div>
                 <label
                   htmlFor="task-parent"
-                  className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
+                  className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground"
                 >
                   Parent task
                 </label>
@@ -144,7 +144,7 @@ export function CreationDrawer({
                   value={parentTaskTitle ?? 'Selected task'}
                   readOnly
                   disabled
-                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 opacity-80"
+                  className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground opacity-80"
                   aria-label="Parent task"
                 />
               </div>
@@ -152,7 +152,7 @@ export function CreationDrawer({
             <div>
               <label
                 htmlFor="task-due-date"
-                className="mb-2 block text-sm font-medium text-slate-300"
+                className="mb-2 block text-sm font-medium text-muted-foreground"
               >
                 Due date
               </label>
@@ -161,7 +161,7 @@ export function CreationDrawer({
                 id="task-due-date"
                 value={taskDueDate}
                 onChange={(e) => setTaskDueDate(e.target.value)}
-                className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground focus:border-ring focus:outline-none"
                 aria-label="Due date"
               />
             </div>
@@ -171,12 +171,12 @@ export function CreationDrawer({
                 id="task-repeat"
                 checked={repeatEnabled}
                 onChange={(e) => setRepeatEnabled(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+                className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
                 aria-label="Repeat task"
               />
               <label
                 htmlFor="task-repeat"
-                className="text-sm font-medium text-slate-300"
+                className="text-sm font-medium text-muted-foreground"
               >
                 Repeat
               </label>
@@ -185,7 +185,7 @@ export function CreationDrawer({
               <div>
                 <label
                   htmlFor="task-frequency"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 block text-sm font-medium text-muted-foreground"
                 >
                   Frequency
                 </label>
@@ -195,7 +195,7 @@ export function CreationDrawer({
                   onChange={(e) =>
                     setTaskFrequency(e.target.value as TaskFrequency)
                   }
-                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none"
+                  className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground focus:border-ring focus:outline-none"
                   aria-label="Repeat frequency"
                 >
                   {FREQUENCY_OPTIONS.map((opt) => (
@@ -215,7 +215,7 @@ export function CreationDrawer({
             </Button>
           </form>
         </div>
-        <DrawerFooter className="flex-row justify-end border-t border-slate-800 pt-4">
+        <DrawerFooter className="flex-row justify-end border-t border-border pt-4">
           <DrawerClose asChild>
             <Button variant="secondary" aria-label="Close drawer">Close</Button>
           </DrawerClose>

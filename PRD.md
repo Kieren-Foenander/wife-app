@@ -39,7 +39,7 @@ Target user: People managing repeatable household routines who want a simple, lo
 - [x] Week/Month day click: scroll within view, do not switch view.
 - [x] Selected day state: clicking a day sets day state for Day view; reset on Today.
 - [x] Today reset: floating button to jump back to today.
-- [ ] Pastel theme: apply palette to components, not just tokens.
+- [x] Pastel theme: apply palette to components, not just tokens.
 - [ ] Remove starter header/menu: keep app single-page.
 - [ ] Add centered small title: "Wife App".
 - [ ] Redesign view tabs: bottom navigation bar, mobile-style.

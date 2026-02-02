@@ -109,7 +109,7 @@ function WeekStrip({
     <section
       role="region"
       aria-label="Week"
-      className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+      className="overflow-x-auto rounded-2xl border border-border bg-card/70 p-4"
     >
       <div className="flex min-w-0 gap-2">
         {weekDates.map((d) => {
@@ -125,10 +125,10 @@ function WeekStrip({
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
               className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${isSelected
-                ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
                 : isToday
-                  ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
-                  : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
+                  ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
+                  : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -137,14 +137,14 @@ function WeekStrip({
               })}
               aria-pressed={isSelected}
             >
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {d.toLocaleDateString('en-US', { weekday: 'short' })}
               </span>
               <span className="text-lg font-semibold tabular-nums">
                 {d.getUTCDate()}
               </span>
               {isToday ? (
-                <span className="rounded bg-slate-600 px-2 py-0.5 text-xs font-medium text-slate-200">
+                <span className="rounded bg-accent/70 px-2 py-0.5 text-xs font-medium text-accent-foreground">
                   Today
                 </span>
               ) : null}
@@ -185,13 +185,13 @@ function MonthGrid({
     <section
       role="region"
       aria-label="Month"
-      className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+      className="overflow-x-auto rounded-2xl border border-border bg-card/70 p-4"
     >
       <div className="grid min-w-0 grid-cols-7 gap-1">
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
-            className="py-2 text-center text-xs font-medium uppercase tracking-wide text-slate-400"
+            className="py-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground"
           >
             {label}
           </div>
@@ -201,7 +201,7 @@ function MonthGrid({
             return (
               <div
                 key={`empty-${i}`}
-                className="aspect-square rounded-lg border border-slate-800/60 bg-slate-950/40 p-1 text-slate-600"
+                className="aspect-square rounded-lg border border-border/70 bg-background/40 p-1 text-muted-foreground/80"
               />
             )
           }
@@ -216,10 +216,10 @@ function MonthGrid({
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
               className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
-                ? 'border-slate-500 bg-slate-700/80 text-slate-100 ring-2 ring-slate-400'
+                ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
                 : isToday
-                  ? 'border-slate-500 bg-slate-700/60 text-slate-100 hover:bg-slate-700/80'
-                  : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:bg-slate-800/60'
+                  ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
+                  : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
                 month: 'short',
@@ -231,7 +231,7 @@ function MonthGrid({
                 {d.getUTCDate()}
               </span>
               {isToday ? (
-                <span className="rounded bg-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-slate-200">
+                <span className="rounded bg-accent/70 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
                   Today
                 </span>
               ) : null}
@@ -270,7 +270,7 @@ function TaskRow({
 }) {
   return (
     <li
-      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
+      className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
         }`}
     >
       {editingTaskId === task._id ? (
@@ -279,7 +279,7 @@ function TaskRow({
             type="text"
             value={draftTitle}
             onChange={(event) => setDraftTitle(event.target.value)}
-            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+            className="h-9 flex-1 rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
             aria-label="Rename task"
           />
           <div className="flex items-center gap-2">
@@ -305,18 +305,18 @@ function TaskRow({
         </>
       ) : (
         <>
-          <ListTodo className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
+          <ListTodo className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
           <label className="flex flex-1 items-center gap-3">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+              className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
               checked={isCompleted}
               onChange={() => handleComplete(task._id, isCompleted)}
               aria-label={`Mark ${task.title} complete`}
             />
             <a
               href={`/tasks/${task._id}`}
-              className={`flex-1 truncate text-left ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
+              className={`flex-1 truncate text-left ${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
                 }`}
             >
               {task.title}
@@ -548,11 +548,11 @@ function DailyView() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
         <header className="space-y-4">
           <div
-            className="inline-flex rounded-xl border border-slate-800 bg-slate-900/60 p-1"
+            className="inline-flex rounded-xl border border-border bg-card/70 p-1"
             role="tablist"
             aria-label="View mode"
           >
@@ -566,8 +566,8 @@ function DailyView() {
                   navigate({ search: { view: mode, date: selectedDateParam } })
                 }
                 className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${view === mode
-                  ? 'bg-slate-700 text-slate-100'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-primary/20 text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
@@ -575,7 +575,7 @@ function DailyView() {
             ))}
           </div>
           <div className="space-y-2">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
               {view === 'day'
                 ? toYYYYMMDDUTC(selectedDate) === toYYYYMMDDUTC(new Date())
                   ? `Today - ${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}`
@@ -589,10 +589,10 @@ function DailyView() {
                   ? 'Weekly'
                   : 'Monthly'}
             </p>
-            <h1 className="text-4xl font-semibold text-slate-100">
+            <h1 className="text-4xl font-semibold text-foreground">
               Tasks
             </h1>
-            <p className="text-base text-slate-400">
+            <p className="text-base text-muted-foreground">
               Create a root task to organize today.
             </p>
           </div>
@@ -628,21 +628,21 @@ function DailyView() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
-            <ListTodo className="size-5 shrink-0 text-slate-400" strokeWidth={1.5} aria-hidden />
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <ListTodo className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
             {view === 'day'
               ? 'Your tasks'
               : view === 'week'
                 ? 'Tasks due this week'
                 : 'Tasks due this month'}
           </h2>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+          <div className="rounded-2xl border border-border bg-card/70 p-6">
             {(view === 'day'
               ? rootTasksDueOnDate === undefined
               : rootTasksByDay === undefined) ? (
               <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading tasks">
                 <Spinner aria-label="Loading tasks" size={24} />
-                <p className="text-sm text-slate-500">Loading tasks...</p>
+                <p className="text-sm text-muted-foreground">Loading tasks...</p>
                 <ul className="w-full space-y-2">
                   {[1, 2, 3].map((i) => (
                     <ListRowSkeleton key={i} />
@@ -651,12 +651,12 @@ function DailyView() {
               </div>
             ) : view === 'day' && rootTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
-                <ClipboardList className="size-12 text-slate-600" strokeWidth={1.25} aria-hidden />
+                <ClipboardList className="size-12 text-muted-foreground" strokeWidth={1.25} aria-hidden />
                 <div className="space-y-1">
-                  <p className="text-base font-medium text-slate-300">
+                  <p className="text-base font-medium text-foreground">
                     No tasks due today
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     Add a task to see it here.
                   </p>
                 </div>
@@ -713,21 +713,21 @@ function DailyView() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-base font-semibold text-slate-100">
+                            <h3 className="text-base font-semibold text-foreground">
                               {label}
                             </h3>
                             {isToday ? (
-                              <span className="rounded bg-slate-700 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-200">
+                              <span className="rounded bg-accent/70 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-accent-foreground">
                                 Today
                               </span>
                             ) : null}
                           </div>
-                          <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                          <span className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                             {view === 'week' ? 'Week' : 'Month'}
                           </span>
                         </div>
                         {tasks.length === 0 ? (
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-muted-foreground">
                             No tasks due.
                           </p>
                         ) : (
@@ -766,7 +766,7 @@ function DailyView() {
                     )
                   })}
                 {!hasAnyTasks && view !== 'day' ? (
-                  <li className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-500">
+                  <li className="rounded-xl border border-dashed border-border bg-background/50 p-4 text-sm text-muted-foreground">
                     No tasks due this {view}.
                   </li>
                 ) : null}

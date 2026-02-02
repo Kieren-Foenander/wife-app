@@ -205,7 +205,7 @@ function TaskDetail() {
     : false
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <main
         id="main-content"
         className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16"
@@ -224,7 +224,7 @@ function TaskDetail() {
           </Button>
           {ancestors === undefined || task === undefined ? (
             <div
-              className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-600"
+              className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground"
               role="status"
               aria-label="Loading path"
             >
@@ -233,40 +233,40 @@ function TaskDetail() {
             </div>
           ) : (
             <nav
-              className="flex flex-wrap items-center gap-2 text-sm text-slate-400"
+              className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
               aria-label="Breadcrumb"
             >
               <Link
                 to="/"
                 search={{ view: 'day' }}
-                className="hover:text-slate-200"
+                className="hover:text-foreground"
               >
                 Daily
               </Link>
               {ancestors.map((ancestor) => (
                 <span key={ancestor._id} className="flex items-center gap-2">
-                  <span className="text-slate-600">/</span>
+                  <span className="text-muted-foreground">/</span>
                   <Link
                     to="/tasks/$taskId"
                     params={{ taskId: ancestor._id }}
-                    className="hover:text-slate-200"
+                    className="hover:text-foreground"
                   >
                     {ancestor.title}
                   </Link>
                 </span>
               ))}
-              <span className="flex items-center gap-2 text-slate-200">
-                <span className="text-slate-600">/</span>
+              <span className="flex items-center gap-2 text-foreground">
+                <span className="text-muted-foreground">/</span>
                 {task ? task.title : 'Unknown'}
               </span>
             </nav>
           )}
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-400">
+          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
             Task
           </p>
           {task === undefined ? (
             <div
-              className="flex items-center gap-2 text-3xl font-semibold text-slate-100"
+              className="flex items-center gap-2 text-3xl font-semibold text-foreground"
               role="status"
               aria-label="Loading task"
             >
@@ -275,7 +275,7 @@ function TaskDetail() {
             </div>
           ) : task ? (
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold text-slate-100">
+              <h1 className="text-3xl font-semibold text-foreground">
                 {task.title}
               </h1>
               <TaskCompletionIndicator
@@ -295,7 +295,7 @@ function TaskDetail() {
               </Button>
             </div>
           ) : (
-            <h1 className="text-3xl font-semibold text-rose-200">
+            <h1 className="text-3xl font-semibold text-foreground">
               Task not found
             </h1>
           )}
@@ -321,15 +321,15 @@ function TaskDetail() {
         </div>
 
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <ListTodo
-              className="size-5 shrink-0 text-slate-400"
+              className="size-5 shrink-0 text-muted-foreground"
               strokeWidth={1.5}
               aria-hidden
             />
             Sub-tasks
           </h2>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
+          <div className="rounded-2xl border border-border bg-card/70 p-6">
             {children === undefined ? (
               <div
                 className="flex flex-col items-center gap-4 py-8"
@@ -337,7 +337,7 @@ function TaskDetail() {
                 aria-label="Loading sub-tasks"
               >
                 <Spinner aria-label="Loading sub-tasks" size={24} />
-                <p className="text-sm text-slate-500">Loading tasks...</p>
+                <p className="text-sm text-muted-foreground">Loading tasks...</p>
                 <ul className="w-full space-y-2">
                   {[1, 2, 3].map((i) => (
                     <ListRowSkeleton key={i} />
@@ -351,15 +351,15 @@ function TaskDetail() {
                 aria-label="No tasks"
               >
                 <ClipboardList
-                  className="size-12 text-slate-600"
+                  className="size-12 text-muted-foreground"
                   strokeWidth={1.25}
                   aria-hidden
                 />
                 <div className="space-y-1">
-                  <p className="text-base font-medium text-slate-300">
+                  <p className="text-base font-medium text-foreground">
                     No sub-tasks yet
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     Add a sub-task to get started.
                   </p>
                 </div>
@@ -375,7 +375,7 @@ function TaskDetail() {
                   return (
                     <li
                       key={child._id}
-                      className={`flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ${celebratingTaskId === child._id ? 'animate-completion-bounce' : ''
+                      className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${celebratingTaskId === child._id ? 'animate-completion-bounce' : ''
                         }`}
                     >
                       {editingTaskId === child._id ? (
@@ -389,7 +389,7 @@ function TaskDetail() {
                                 [child._id]: event.target.value,
                               }))
                             }
-                            className="h-9 flex-1 rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-slate-600 focus:outline-none"
+                            className="h-9 flex-1 rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                             aria-label="Rename task"
                           />
                           <div className="flex items-center gap-2">
@@ -421,14 +421,14 @@ function TaskDetail() {
                       ) : (
                         <>
                           <ListTodo
-                            className="size-5 shrink-0 text-slate-500"
+                            className="size-5 shrink-0 text-muted-foreground"
                             strokeWidth={1.5}
                             aria-hidden
                           />
                           <label className="flex flex-1 items-center gap-3">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-slate-100 accent-slate-200"
+                              className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
                               checked={isCompleted}
                               onChange={() =>
                                 handleCompleteTask(child._id, isCompleted)
@@ -438,7 +438,7 @@ function TaskDetail() {
                             <Link
                               to="/tasks/$taskId"
                               params={{ taskId: child._id }}
-                              className={`flex-1 truncate text-left ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-100'
+                              className={`flex-1 truncate text-left ${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
                                 }`}
                             >
                               {child.title}

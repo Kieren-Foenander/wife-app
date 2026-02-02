@@ -9,7 +9,7 @@ export function Skeleton({ className }: SkeletonProps) {
     <div
       role="presentation"
       aria-hidden
-      className={cn('animate-pulse rounded-md bg-slate-800', className)}
+      className={cn('animate-pulse rounded-md bg-muted', className)}
     />
   )
 }
@@ -19,7 +19,7 @@ export function ListRowSkeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-4 py-3',
+        'flex items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3',
         className,
       )}
     >

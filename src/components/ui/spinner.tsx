@@ -20,7 +20,7 @@ export function Spinner({
       className={`inline-flex shrink-0 ${className}`}
     >
       <Loader2
-        className="animate-spin text-slate-400"
+        className="animate-spin text-muted-foreground"
         size={size}
         strokeWidth={1.5}
         aria-hidden

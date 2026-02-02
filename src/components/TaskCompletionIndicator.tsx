@@ -26,7 +26,7 @@ export function TaskCompletionIndicator({
 
   return (
     <div
-      className="flex items-center gap-3 text-xs text-slate-400"
+      className="flex items-center gap-3 text-xs text-muted-foreground"
       data-testid="task-completion"
       role="progressbar"
       aria-valuenow={progress}
@@ -34,9 +34,9 @@ export function TaskCompletionIndicator({
       aria-valuemax={100}
       aria-label={`${completed} of ${total} tasks completed`}
     >
-      <div className="h-1 w-20 overflow-hidden rounded-full bg-slate-800">
+      <div className="h-1 w-20 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-emerald-400/80"
+          className="h-full rounded-full bg-primary/70"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -44,11 +44,11 @@ export function TaskCompletionIndicator({
         {completed}/{total} done
       </span>
       {isComplete ? (
-        <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-emerald-200">
+        <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-foreground">
           Completed
         </span>
       ) : isPartial ? (
-        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-200">
+        <span className="rounded-full border border-accent/40 bg-accent/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-accent-foreground">
           Partial
         </span>
       ) : null}
