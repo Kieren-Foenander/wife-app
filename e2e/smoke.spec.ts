@@ -96,7 +96,54 @@ test.describe('Daily view smoke', () => {
     await taskCheckbox.check()
     await expect(taskCheckbox).toBeChecked()
     const completionIndicator = page.getByTestId('task-completion')
-    await expect(completionIndicator.getByText('1/2 done')).toBeVisible({
+    await expect(completionIndicator.getByText('2/2 done')).toBeVisible({
+      timeout: 45000,
+    })
+    await expect(completionIndicator.getByText('Completed')).toBeVisible({
+      timeout: 45000,
+    })
+  })
+
+  test('sub-task completion syncs parent completion', async ({ page }) => {
+    test.setTimeout(90_000)
+    const rootTaskName = `Sync ${Date.now()}`
+    const taskOne = `First ${Date.now()}`
+    const taskTwo = `Second ${Date.now()}`
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Add task' }).click()
+    const rootDrawer = page.getByRole('dialog', { name: 'Add task' })
+    await rootDrawer.getByPlaceholder(/pay rent/i).fill(rootTaskName)
+    await rootDrawer.getByRole('button', { name: 'Add task' }).click()
+    const taskLink = page.getByRole('link', { name: rootTaskName })
+    await expect(taskLink).toBeVisible({ timeout: 45000 })
+    await taskLink.click()
+    await page.waitForURL(/\/tasks\//)
+
+    await page.getByRole('button', { name: 'Add sub-task' }).click()
+    let subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
+    await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
+    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+    await page.getByRole('button', { name: 'Add sub-task' }).click()
+    subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
+    await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskTwo)
+    await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
+
+    const firstCheckbox = page.getByLabel(`Mark ${taskOne} complete`)
+    const secondCheckbox = page.getByLabel(`Mark ${taskTwo} complete`)
+    await firstCheckbox.check()
+    await secondCheckbox.check()
+
+    const completionIndicator = page.getByTestId('task-completion')
+    await expect(completionIndicator.getByText('3/3 done')).toBeVisible({
+      timeout: 45000,
+    })
+    await expect(completionIndicator.getByText('Completed')).toBeVisible({
+      timeout: 45000,
+    })
+
+    await firstCheckbox.uncheck()
+    await expect(completionIndicator.getByText('1/3 done')).toBeVisible({
       timeout: 45000,
     })
     await expect(completionIndicator.getByText('Partial')).toBeVisible({

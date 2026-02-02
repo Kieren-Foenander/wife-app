@@ -374,14 +374,14 @@ function DailyView() {
     {},
   )
   const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
-    Record<string, boolean>
+    Partial<Record<string, boolean>>
   >({})
   const [celebratingTaskId, setCelebratingTaskId] =
     useState<Id<'tasks'> | null>(null)
   const createTask = useMutation(api.todos.createTask)
   const updateTask = useMutation(api.todos.updateTask)
   const deleteTask = useMutation(api.todos.deleteTask)
-  const completeTaskAndSubtasks = useMutation(api.todos.completeTaskAndSubtasks)
+  const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
   const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
     dayStartMs,
   })
@@ -477,12 +477,17 @@ function DailyView() {
     id: Id<'tasks'>,
     currentCompleted: boolean,
   ) => {
-    if (currentCompleted) return
-    setCelebratingTaskId(id)
-    setTimeout(() => setCelebratingTaskId(null), 500)
-    setTaskCompletionOverrides((prev) => ({ ...prev, [id]: true }))
+    const nextCompleted = !currentCompleted
+    if (nextCompleted) {
+      setCelebratingTaskId(id)
+      setTimeout(() => setCelebratingTaskId(null), 500)
+    }
+    setTaskCompletionOverrides((prev) => ({
+      ...prev,
+      [id]: nextCompleted,
+    }))
     try {
-      await completeTaskAndSubtasks({ taskId: id })
+      await setTaskCompletion({ taskId: id, completed: nextCompleted })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update task.',
@@ -622,7 +627,8 @@ function DailyView() {
               <ul className="space-y-2">
                 {rootTasks.map((task) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
-                  const isCompleted = taskCompletionOverrides[task._id] ?? false
+                  const isCompleted =
+                    taskCompletionOverrides[task._id] ?? task.isCompleted
                   return (
                     <TaskRow
                       key={task._id}

@@ -33,7 +33,7 @@ function TaskDetail() {
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
   const [draftTitles, setDraftTitles] = useState<Record<string, string>>({})
   const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
-    Record<string, boolean>
+    Partial<Record<string, boolean>>
   >({})
   const [celebratingTaskId, setCelebratingTaskId] =
     useState<Id<'tasks'> | null>(null)
@@ -41,18 +41,30 @@ function TaskDetail() {
   const createTask = useMutation(api.todos.createTask)
   const updateTask = useMutation(api.todos.updateTask)
   const deleteTask = useMutation(api.todos.deleteTask)
-  const completeTaskAndSubtasks = useMutation(api.todos.completeTaskAndSubtasks)
+  const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
 
   const effectiveCompletion = useMemo(() => {
     if (!completion) return undefined
     const overrideCount = Object.values(taskCompletionOverrides).filter(Boolean)
       .length
-    if (overrideCount === 0) return completion
+    let completed = Math.min(
+      completion.total,
+      completion.completed + overrideCount,
+    )
+    if (children && children.tasks.length > 0) {
+      const allChildrenCompleted = children.tasks.every((child) => {
+        const override = taskCompletionOverrides[child._id]
+        return override ?? child.isCompleted
+      })
+      if (allChildrenCompleted) {
+        completed = Math.min(completion.total, completed + 1)
+      }
+    }
     return {
       total: completion.total,
-      completed: Math.min(completion.total, completion.completed + overrideCount),
+      completed,
     }
-  }, [completion, taskCompletionOverrides])
+  }, [completion, children, taskCompletionOverrides])
 
   const handleAddTask = async (params: {
     title: string
@@ -130,15 +142,32 @@ function TaskDetail() {
     id: Id<'tasks'>,
     currentCompleted: boolean,
   ) => {
-    if (currentCompleted) return
-    setCelebratingTaskId(id)
-    setTimeout(() => setCelebratingTaskId(null), 500)
+    const nextCompleted = !currentCompleted
+    if (nextCompleted) {
+      setCelebratingTaskId(id)
+      setTimeout(() => setCelebratingTaskId(null), 500)
+    }
     setTaskCompletionOverrides((prev) => ({
       ...prev,
-      [id]: true,
+      [id]: nextCompleted,
     }))
+    const shouldCompleteParent =
+      nextCompleted &&
+      children != null &&
+      children.tasks.length > 0 &&
+      children.tasks.every((child) => {
+        if (child._id === id) return nextCompleted
+        const override = taskCompletionOverrides[child._id]
+        return override ?? child.isCompleted
+      })
     try {
-      await completeTaskAndSubtasks({ taskId: id })
+      await setTaskCompletion({ taskId: id, completed: nextCompleted })
+      if (shouldCompleteParent) {
+        await setTaskCompletion({
+          taskId: taskId as Id<'tasks'>,
+          completed: true,
+        })
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to complete task.',
@@ -158,7 +187,10 @@ function TaskDetail() {
       })
     }
     try {
-      await completeTaskAndSubtasks({ taskId: taskId as Id<'tasks'> })
+      await setTaskCompletion({
+        taskId: taskId as Id<'tasks'>,
+        completed: true,
+      })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to complete tasks.',

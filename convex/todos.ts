@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { frequencyValidator } from './schema'
 import type { Id } from './_generated/dataModel'
-import type { QueryCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 
 /** Frequency type for next-due computation. */
 type Frequency =
@@ -78,6 +78,159 @@ async function getLatestCompletionDate(
     .order('desc')
     .first()
   return latest?.completedDate
+}
+
+async function isTaskCompleted(
+  ctx: QueryCtx,
+  taskId: Id<'tasks'>,
+): Promise<boolean> {
+  const existing = await ctx.db
+    .query('completedTasks')
+    .withIndex('by_task_id', (q) => q.eq('taskId', taskId))
+    .first()
+  return existing != null
+}
+
+async function isTaskCompletedWithChildren(
+  ctx: QueryCtx,
+  taskId: Id<'tasks'>,
+): Promise<boolean> {
+  const children = await ctx.db
+    .query('tasks')
+    .withIndex('byParentTaskId', (q) => q.eq('parentTaskId', taskId))
+    .collect()
+  if (children.length === 0) {
+    return await isTaskCompleted(ctx, taskId)
+  }
+  for (const child of children) {
+    if (!(await isTaskCompletedWithChildren(ctx, child._id))) {
+      return false
+    }
+  }
+  return true
+}
+
+async function deleteTaskCompletions(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+): Promise<void> {
+  const completed = await ctx.db
+    .query('completedTasks')
+    .withIndex('by_task_id', (q) => q.eq('taskId', taskId))
+    .collect()
+  for (const row of completed) {
+    await ctx.db.delete(row._id)
+  }
+}
+
+async function collectTaskAndDescendantIds(
+  ctx: QueryCtx,
+  rootId: Id<'tasks'>,
+): Promise<Array<Id<'tasks'>>> {
+  const queue: Array<Id<'tasks'>> = [rootId]
+  const allTaskIds: Array<Id<'tasks'>> = []
+  while (queue.length > 0) {
+    const currentId = queue.shift()
+    if (!currentId) continue
+    allTaskIds.push(currentId)
+    const children = await ctx.db
+      .query('tasks')
+      .withIndex('byParentTaskId', (q) => q.eq('parentTaskId', currentId))
+      .collect()
+    for (const child of children) {
+      queue.push(child._id)
+    }
+  }
+  return allTaskIds
+}
+
+async function ensureTaskCompleted(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+  completedDate: number,
+): Promise<void> {
+  const existing = await ctx.db
+    .query('completedTasks')
+    .withIndex('by_task_id', (q) => q.eq('taskId', taskId))
+    .first()
+  if (existing) return
+  await ctx.db.insert('completedTasks', { taskId, completedDate })
+}
+
+async function completeTaskTree(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+  completedDate: number,
+): Promise<Array<Id<'tasks'>>> {
+  const allTaskIds = await collectTaskAndDescendantIds(ctx, taskId)
+  for (const id of allTaskIds) {
+    await ensureTaskCompleted(ctx, id, completedDate)
+  }
+  return allTaskIds
+}
+
+async function areAllChildrenCompleted(
+  ctx: QueryCtx,
+  parentId: Id<'tasks'>,
+  optimisticCompletedIds?: Set<Id<'tasks'>>,
+): Promise<boolean> {
+  const children = await ctx.db
+    .query('tasks')
+    .withIndex('byParentTaskId', (q) => q.eq('parentTaskId', parentId))
+    .collect()
+  if (children.length === 0) return false
+  for (const child of children) {
+    if (optimisticCompletedIds?.has(child._id)) {
+      continue
+    }
+    if (!(await isTaskCompleted(ctx, child._id))) {
+      return false
+    }
+  }
+  return true
+}
+
+async function syncAncestorsOnComplete(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+  completedDate: number,
+  optimisticCompletedIds?: Set<Id<'tasks'>>,
+): Promise<void> {
+  let current = await ctx.db.get(taskId)
+  while (current?.parentTaskId) {
+    const parentId = current.parentTaskId
+    const allCompleted = await areAllChildrenCompleted(
+      ctx,
+      parentId,
+      optimisticCompletedIds,
+    )
+    if (!allCompleted) break
+    await ensureTaskCompleted(ctx, parentId, completedDate)
+    optimisticCompletedIds?.add(parentId)
+    current = await ctx.db.get(parentId)
+  }
+}
+
+async function clearAncestorCompletions(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+): Promise<void> {
+  let current = await ctx.db.get(taskId)
+  while (current?.parentTaskId) {
+    const parentId = current.parentTaskId
+    await deleteTaskCompletions(ctx, parentId)
+    current = await ctx.db.get(parentId)
+  }
+}
+
+async function clearTaskTreeCompletions(
+  ctx: MutationCtx,
+  taskId: Id<'tasks'>,
+): Promise<void> {
+  const allTaskIds = await collectTaskAndDescendantIds(ctx, taskId)
+  for (const id of allTaskIds) {
+    await deleteTaskCompletions(ctx, id)
+  }
 }
 
 /** Whether a task is due on the given day (UTC). Non-recurring: due on day D iff (!dueDate || dueDate === dayStartMs) and !completed. Recurring: first due = dueDate ?? refTodayStart; due on D if D >= firstDue or next due <= end of D. */
@@ -217,10 +370,10 @@ export const listTaskChildren = query({
       .collect()
     const tasks = await Promise.all(
       children.map(async (task) => {
-        const latestCompletedDate = await getLatestCompletionDate(ctx, task._id)
+        const isCompleted = await isTaskCompletedWithChildren(ctx, task._id)
         return {
           ...task,
-          isCompleted: latestCompletedDate != null,
+          isCompleted,
         }
       }),
     )
@@ -251,8 +404,7 @@ export const getTaskCompletion = query({
     }
     let completed = 0
     for (const taskId of allTaskIds) {
-      const latestCompletedDate = await getLatestCompletionDate(ctx, taskId)
-      if (latestCompletedDate != null) {
+      if (await isTaskCompletedWithChildren(ctx, taskId)) {
         completed += 1
       }
     }
@@ -312,11 +464,16 @@ export const listRootTasksDueOnDate = query({
         latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
       })),
     )
-    return withLatestCompletion
+    const dueTasks = withLatestCompletion
       .filter(({ task, latestCompletedDate }) =>
         isTaskDueOnDay(task, args.dayStartMs, now, latestCompletedDate),
       )
-      .map(({ task }) => task)
+    return await Promise.all(
+      dueTasks.map(async ({ task }) => ({
+        ...task,
+        isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
+      })),
+    )
   },
 })
 
@@ -337,11 +494,16 @@ export const listRootTasksDueInWeek = query({
         latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
       })),
     )
-    return withLatestCompletion
+    const dueTasks = withLatestCompletion
       .filter(({ task, latestCompletedDate }) =>
         isTaskDueInRange(task, start, end, now, latestCompletedDate),
       )
-      .map(({ task }) => task)
+    return await Promise.all(
+      dueTasks.map(async ({ task }) => ({
+        ...task,
+        isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
+      })),
+    )
   },
 })
 
@@ -362,11 +524,16 @@ export const listRootTasksDueInMonth = query({
         latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
       })),
     )
-    return withLatestCompletion
+    const dueTasks = withLatestCompletion
       .filter(({ task, latestCompletedDate }) =>
         isTaskDueInRange(task, start, end, now, latestCompletedDate),
       )
-      .map(({ task }) => task)
+    return await Promise.all(
+      dueTasks.map(async ({ task }) => ({
+        ...task,
+        isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
+      })),
+    )
   },
 })
 
@@ -458,29 +625,28 @@ export const completeTaskAndSubtasks = mutation({
   args: { taskId: v.id('tasks') },
   handler: async (ctx, args) => {
     const now = Date.now()
-    const queue: Array<Id<'tasks'>> = [args.taskId]
-    const allTaskIds: Array<Id<'tasks'>> = []
-    while (queue.length > 0) {
-      const currentId = queue.shift()
-      if (!currentId) continue
-      allTaskIds.push(currentId)
-      const children = await ctx.db
-        .query('tasks')
-        .withIndex('byParentTaskId', (q) =>
-          q.eq('parentTaskId', currentId),
-        )
-        .collect()
-      for (const child of children) {
-        queue.push(child._id)
-      }
+    const ids = await completeTaskTree(ctx, args.taskId, now)
+    return { inserted: ids.length }
+  },
+})
+
+export const setTaskCompletion = mutation({
+  args: { taskId: v.id('tasks'), completed: v.boolean() },
+  handler: async (ctx, args) => {
+    if (args.completed) {
+      const now = Date.now()
+      const completedIds = await completeTaskTree(ctx, args.taskId, now)
+      await syncAncestorsOnComplete(
+        ctx,
+        args.taskId,
+        now,
+        new Set(completedIds),
+      )
+      return { completed: true }
     }
-    for (const taskId of allTaskIds) {
-      await ctx.db.insert('completedTasks', {
-        taskId,
-        completedDate: now,
-      })
-    }
-    return { inserted: allTaskIds.length }
+    await clearTaskTreeCompletions(ctx, args.taskId)
+    await clearAncestorCompletions(ctx, args.taskId)
+    return { completed: false }
   },
 })
 
