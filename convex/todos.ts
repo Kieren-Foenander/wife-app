@@ -91,9 +91,18 @@ export function isTaskDueOnDay(
   const todayStart = startOfDayUTC(refNow)
   const isRecurring = task.frequency != null
 
+  const dayEndMs = dayStartMs + MS_PER_DAY - 1
+
   if (!isRecurring) {
-    if (latestCompletedDate != null) return false
     if (task.dueDate != null) return task.dueDate === dayStartMs
+    return true
+  }
+
+  if (
+    latestCompletedDate != null &&
+    latestCompletedDate >= dayStartMs &&
+    latestCompletedDate <= dayEndMs
+  ) {
     return true
   }
 
@@ -102,7 +111,6 @@ export function isTaskDueOnDay(
     return dayStartMs >= firstDue
   }
 
-  const dayEndMs = dayStartMs + MS_PER_DAY - 1
   const nextDue = nextDueAfter(latestCompletedDate, task.frequency!)
   return nextDue <= dayEndMs
 }
@@ -134,10 +142,16 @@ function isTaskDueInRange(
 ): boolean {
   const isRecurring = task.frequency != null
   if (!isRecurring) {
-    if (latestCompletedDate != null) return false
     if (task.dueDate != null) {
       return task.dueDate >= rangeStartMs && task.dueDate <= rangeEndMs
     }
+    return true
+  }
+  if (
+    latestCompletedDate != null &&
+    latestCompletedDate >= rangeStartMs &&
+    latestCompletedDate <= rangeEndMs
+  ) {
     return true
   }
   const nextDue = getNextDueMs(task, nowMs, latestCompletedDate)

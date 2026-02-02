@@ -56,11 +56,10 @@ test.describe('Daily view smoke', () => {
     const checkbox = page.getByLabel(`Mark ${taskTitle} complete`)
     await expect(checkbox).not.toBeChecked()
     await checkbox.click()
-    // Non-recurring task: either checkbox becomes checked or task drops off Daily list (no longer due today)
-    await Promise.race([
-      expect(checkbox).toBeChecked({ timeout: 25000 }),
-      expect(page.getByText(taskTitle)).not.toBeVisible({ timeout: 25000 }),
-    ])
+    await expect(checkbox).toBeChecked({ timeout: 25000 })
+    const taskLink = page.getByRole('link', { name: taskTitle })
+    await expect(taskLink).toBeVisible()
+    await expect(taskLink).toHaveClass(/line-through/)
   })
 
   test('task detail shows sub-tasks and completion indicator', async ({
