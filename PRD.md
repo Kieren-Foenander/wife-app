@@ -42,4 +42,4 @@ Target user: People managing repeatable household routines who want a simple, lo
 - [x] Pastel theme: apply palette to components, not just tokens.
 - [x] Remove starter header/menu: keep app single-page.
 - [x] Add centered small title: "Wife App".
-- [ ] Redesign view tabs: bottom navigation bar, mobile-style.
+- [x] Redesign view tabs: bottom navigation bar, mobile-style.

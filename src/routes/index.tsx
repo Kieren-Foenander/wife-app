@@ -549,34 +549,15 @@ function DailyView() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main id="main-content" className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16" aria-label="Daily view">
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 pb-32 pt-16"
+        aria-label="Daily view"
+      >
         <header className="space-y-4">
           <p className="text-center text-xs font-semibold text-muted-foreground">
             Wife App
           </p>
-          <div
-            className="inline-flex rounded-xl border border-border bg-card/70 p-1"
-            role="tablist"
-            aria-label="View mode"
-          >
-            {(['day', 'week', 'month'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                role="tab"
-                aria-selected={view === mode}
-                onClick={() =>
-                  navigate({ search: { view: mode, date: selectedDateParam } })
-                }
-                className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${view === mode
-                  ? 'bg-primary/20 text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-                  }`}
-              >
-                {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
-              </button>
-            ))}
-          </div>
           <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
               {view === 'day'
@@ -781,13 +762,38 @@ function DailyView() {
       {!isSelectedToday ? (
         <Button
           type="button"
-          className="fixed bottom-6 right-6 z-20 h-12 rounded-full px-5 text-base shadow-lg"
+          className="fixed bottom-24 right-6 z-20 h-12 rounded-full px-5 text-base shadow-lg"
           onClick={handleResetToday}
           aria-label="Jump to today"
         >
           Today
         </Button>
       ) : null}
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/90 backdrop-blur">
+        <div
+          className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2 px-6 py-3"
+          role="tablist"
+          aria-label="View mode"
+        >
+          {(['day', 'week', 'month'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              role="tab"
+              aria-selected={view === mode}
+              onClick={() =>
+                navigate({ search: { view: mode, date: selectedDateParam } })
+              }
+              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors ${view === mode
+                ? 'bg-primary/20 text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   )
 }
