@@ -478,10 +478,8 @@ function DailyView() {
     currentCompleted: boolean,
   ) => {
     if (currentCompleted) return
-    if (!currentCompleted) {
-      setCelebratingTaskId(id)
-      setTimeout(() => setCelebratingTaskId(null), 500)
-    }
+    setCelebratingTaskId(id)
+    setTimeout(() => setCelebratingTaskId(null), 500)
     setTaskCompletionOverrides((prev) => ({ ...prev, [id]: true }))
     try {
       await completeTaskAndSubtasks({ taskId: id })

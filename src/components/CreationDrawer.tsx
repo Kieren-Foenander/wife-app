@@ -80,6 +80,7 @@ export function CreationDrawer({
   const [taskDueDate, setTaskDueDate] = useState<string>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
+  const showParentPicker = parentTaskId != null
   const tasksForPicker = useQuery(api.todos.listTasksForParentPicker)
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export function CreationDrawer({
     if (!trimmed) return
     await onAddTask({
       title: trimmed,
-      parentTaskId: taskParentId || undefined,
+      parentTaskId: showParentPicker ? taskParentId || undefined : undefined,
       dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : undefined,
       frequency: repeatEnabled && taskFrequency ? taskFrequency : undefined,
     })
@@ -132,39 +133,41 @@ export function CreationDrawer({
                 aria-label="Task title"
               />
             </div>
-            <div>
-              <label
-                htmlFor="task-parent"
-                className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
-              >
-                Parent task
-                {tasksForPicker === undefined ? (
-                  <Spinner aria-label="Loading tasks" size={14} />
-                ) : null}
-              </label>
-              <select
-                id="task-parent"
-                value={taskParentId}
-                onChange={(e) =>
-                  setTaskParentId(
-                    e.target.value ? (e.target.value as Id<'tasks'>) : '',
-                  )
-                }
-                disabled={tasksForPicker === undefined}
-                className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none disabled:opacity-70"
-                aria-label="Parent task"
-                aria-busy={tasksForPicker === undefined}
-              >
-                <option value="">
-                  {tasksForPicker === undefined ? 'Loading...' : 'None (root)'}
-                </option>
-                {tasksForPicker?.map((task) => (
-                  <option key={task._id} value={task._id}>
-                    {'\u00A0'.repeat(task.depth * 2)}{task.depth > 0 ? '— ' : ''}{task.title}
+            {showParentPicker ? (
+              <div>
+                <label
+                  htmlFor="task-parent"
+                  className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
+                >
+                  Parent task
+                  {tasksForPicker === undefined ? (
+                    <Spinner aria-label="Loading tasks" size={14} />
+                  ) : null}
+                </label>
+                <select
+                  id="task-parent"
+                  value={taskParentId}
+                  onChange={(e) =>
+                    setTaskParentId(
+                      e.target.value ? (e.target.value as Id<'tasks'>) : '',
+                    )
+                  }
+                  disabled={tasksForPicker === undefined}
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none disabled:opacity-70"
+                  aria-label="Parent task"
+                  aria-busy={tasksForPicker === undefined}
+                >
+                  <option value="">
+                    {tasksForPicker === undefined ? 'Loading...' : 'None (root)'}
                   </option>
-                ))}
-              </select>
-            </div>
+                  {tasksForPicker?.map((task) => (
+                    <option key={task._id} value={task._id}>
+                      {'\u00A0'.repeat(task.depth * 2)}{task.depth > 0 ? '— ' : ''}{task.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div>
               <label
                 htmlFor="task-due-date"

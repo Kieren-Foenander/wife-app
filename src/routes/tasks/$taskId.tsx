@@ -9,8 +9,8 @@ import { Button } from '../../components/ui/button'
 import { ListRowSkeleton } from '../../components/ui/skeleton'
 import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
-import type { Id } from '../../../convex/_generated/dataModel'
 import { TaskCompletionIndicator } from '../../components/TaskCompletionIndicator'
+import type { Id } from '../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   ssr: false,
@@ -336,6 +336,9 @@ function TaskDetail() {
                 {children.tasks.map((child) => {
                   const isCompleted =
                     taskCompletionOverrides[child._id] ?? child.isCompleted
+                  const trimmedDraftTitle = (
+                    draftTitles[child._id] ?? ''
+                  ).trim()
                   return (
                     <li
                       key={child._id}
@@ -361,8 +364,8 @@ function TaskDetail() {
                               type="button"
                               className="h-9 px-4"
                               disabled={
-                                !draftTitles[child._id]?.trim() ||
-                                draftTitles[child._id]?.trim() === child.title
+                                !trimmedDraftTitle ||
+                                trimmedDraftTitle === child.title
                               }
                               onClick={() =>
                                 saveTaskEditing(child._id, child.title)

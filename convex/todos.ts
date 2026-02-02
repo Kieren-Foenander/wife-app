@@ -1,7 +1,8 @@
 import { v } from 'convex/values'
-import { mutation, query, QueryCtx } from './_generated/server'
-import { Id } from './_generated/dataModel'
+import { mutation, query } from './_generated/server'
 import { frequencyValidator } from './schema'
+import type { Id } from './_generated/dataModel'
+import type { QueryCtx } from './_generated/server'
 
 /** Frequency type for next-due computation. */
 type Frequency =
@@ -180,12 +181,12 @@ export const getTask = query({
 export const listTaskAncestors = query({
   args: { taskId: v.id('tasks') },
   handler: async (ctx, args) => {
-    const ancestors: Array<{ _id: Id<'tasks'> }> = []
+    const ancestors: Array<{ _id: Id<'tasks'>; title: string }> = []
     let current = await ctx.db.get(args.taskId)
     while (current?.parentTaskId) {
       const parent = await ctx.db.get(current.parentTaskId)
       if (!parent) break
-      ancestors.unshift(parent)
+      ancestors.unshift({ _id: parent._id, title: parent.title })
       current = parent
     }
     return ancestors
@@ -220,8 +221,8 @@ export const listTaskChildren = query({
 export const getTaskCompletion = query({
   args: { taskId: v.id('tasks') },
   handler: async (ctx, args) => {
-    const queue: Id<'tasks'>[] = [args.taskId]
-    const allTaskIds: Id<'tasks'>[] = []
+    const queue: Array<Id<'tasks'>> = [args.taskId]
+    const allTaskIds: Array<Id<'tasks'>> = []
     while (queue.length > 0) {
       const currentId = queue.shift()
       if (!currentId) continue
@@ -443,8 +444,8 @@ export const completeTaskAndSubtasks = mutation({
   args: { taskId: v.id('tasks') },
   handler: async (ctx, args) => {
     const now = Date.now()
-    const queue: Id<'tasks'>[] = [args.taskId]
-    const allTaskIds: Id<'tasks'>[] = []
+    const queue: Array<Id<'tasks'>> = [args.taskId]
+    const allTaskIds: Array<Id<'tasks'>> = []
     while (queue.length > 0) {
       const currentId = queue.shift()
       if (!currentId) continue

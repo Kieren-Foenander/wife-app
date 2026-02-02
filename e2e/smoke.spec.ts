@@ -37,7 +37,7 @@ test.describe('Daily view smoke', () => {
     await expect(drawer).toBeVisible()
     await expect(drawer.getByLabel('Task title')).toBeVisible()
     await expect(drawer.getByPlaceholder(/pay rent/i)).toBeVisible()
-    await expect(drawer.getByLabel('Parent task')).toBeVisible()
+    await expect(drawer.getByLabel('Parent task')).toHaveCount(0)
     await expect(drawer.getByLabel('Due date')).toBeVisible()
     await expect(drawer.getByRole('button', { name: 'Add task' })).toBeVisible()
   })
@@ -87,7 +87,7 @@ test.describe('Daily view smoke', () => {
     const subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
     await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
-    await expect(page.getByText(taskOne)).toBeVisible()
+    await expect(page.getByRole('link', { name: taskOne })).toBeVisible()
 
     const taskCheckbox = page.getByLabel(`Mark ${taskOne} complete`)
     await taskCheckbox.check()
@@ -127,8 +127,8 @@ test.describe('Daily view smoke', () => {
     subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskB)
     await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
-    await expect(page.getByText(taskA)).toBeVisible()
-    await expect(page.getByText(taskB)).toBeVisible()
+    await expect(page.getByRole('link', { name: taskA })).toBeVisible()
+    await expect(page.getByRole('link', { name: taskB })).toBeVisible()
 
     const bulkCompleteButton = page.getByRole('button', { name: 'Complete all' })
     await expect(bulkCompleteButton).toBeVisible({ timeout: 45000 })
@@ -167,7 +167,7 @@ test.describe('Daily view smoke', () => {
     const taskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
     await taskDrawer.getByPlaceholder(/pay rent/i).fill(childTaskTitle)
     await page.getByRole('button', { name: 'Add task' }).click()
-    await expect(page.getByText(childTaskTitle)).toBeVisible()
+    await expect(page.getByRole('link', { name: childTaskTitle })).toBeVisible()
   })
 
   test('selecting a day in week view shows that day and task creation uses it as due date', async ({
