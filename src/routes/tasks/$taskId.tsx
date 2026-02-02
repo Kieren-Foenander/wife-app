@@ -282,6 +282,7 @@ function TaskDetail() {
             onOpenChange={setDrawerOpen}
             onAddTask={handleAddTask}
             parentTaskId={task?._id ?? (taskId as Id<'tasks'>)}
+            parentTaskTitle={task?.title}
             title="Add sub-task"
             defaultDueDate={new Date()}
           />

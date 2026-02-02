@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from 'convex/react'
-import { api } from '../../convex/_generated/api'
 import { Button } from './ui/button'
 import {
   Drawer,
@@ -10,7 +8,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from './ui/drawer'
-import { Spinner } from './ui/spinner'
 import type { Id } from '../../convex/_generated/dataModel'
 
 export type TaskFrequency =
@@ -60,6 +57,8 @@ type CreationDrawerProps = {
   onOpenChange: (open: boolean) => void
   /** When set, new tasks are created under this task; when null, root. */
   parentTaskId?: Id<'tasks'> | null
+  /** Read-only parent name shown when parentTaskId provided. */
+  parentTaskTitle?: string
   onAddTask: (params: AddTaskParams) => Promise<void>
   /** Title shown in drawer header. */
   title?: string
@@ -71,21 +70,19 @@ export function CreationDrawer({
   open,
   onOpenChange,
   parentTaskId,
+  parentTaskTitle,
   onAddTask,
   title = 'Create task',
   defaultDueDate,
 }: CreationDrawerProps) {
   const [taskTitle, setTaskTitle] = useState('')
-  const [taskParentId, setTaskParentId] = useState<Id<'tasks'> | ''>('')
   const [taskDueDate, setTaskDueDate] = useState<string>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
-  const showParentPicker = parentTaskId != null
-  const tasksForPicker = useQuery(api.todos.listTasksForParentPicker)
+  const showParentInfo = parentTaskId != null
 
   useEffect(() => {
     if (open) {
-      setTaskParentId(parentTaskId ?? '')
       setTaskDueDate(
         toDateInputValue(defaultDueDate ?? new Date()),
       )
@@ -98,7 +95,7 @@ export function CreationDrawer({
     if (!trimmed) return
     await onAddTask({
       title: trimmed,
-      parentTaskId: showParentPicker ? taskParentId || undefined : undefined,
+      parentTaskId: showParentInfo ? parentTaskId : undefined,
       dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : undefined,
       frequency: repeatEnabled && taskFrequency ? taskFrequency : undefined,
     })
@@ -133,39 +130,23 @@ export function CreationDrawer({
                 aria-label="Task title"
               />
             </div>
-            {showParentPicker ? (
+            {showParentInfo ? (
               <div>
                 <label
                   htmlFor="task-parent"
                   className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-300"
                 >
                   Parent task
-                  {tasksForPicker === undefined ? (
-                    <Spinner aria-label="Loading tasks" size={14} />
-                  ) : null}
                 </label>
-                <select
+                <input
                   id="task-parent"
-                  value={taskParentId}
-                  onChange={(e) =>
-                    setTaskParentId(
-                      e.target.value ? (e.target.value as Id<'tasks'>) : '',
-                    )
-                  }
-                  disabled={tasksForPicker === undefined}
-                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 focus:border-slate-600 focus:outline-none disabled:opacity-70"
+                  type="text"
+                  value={parentTaskTitle ?? 'Selected task'}
+                  readOnly
+                  disabled
+                  className="h-10 w-full rounded-md border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100 opacity-80"
                   aria-label="Parent task"
-                  aria-busy={tasksForPicker === undefined}
-                >
-                  <option value="">
-                    {tasksForPicker === undefined ? 'Loading...' : 'None (root)'}
-                  </option>
-                  {tasksForPicker?.map((task) => (
-                    <option key={task._id} value={task._id}>
-                      {'\u00A0'.repeat(task.depth * 2)}{task.depth > 0 ? '— ' : ''}{task.title}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             ) : null}
             <div>

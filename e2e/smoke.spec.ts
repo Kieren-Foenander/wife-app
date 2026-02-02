@@ -85,6 +85,10 @@ test.describe('Daily view smoke', () => {
 
     await page.getByRole('button', { name: 'Add sub-task' }).click()
     const subTaskDrawer = page.getByRole('dialog', { name: 'Add sub-task' })
+    const parentField = subTaskDrawer.getByLabel('Parent task')
+    await expect(parentField).toBeVisible()
+    await expect(parentField).toBeDisabled()
+    await expect(parentField).toHaveValue(rootTaskName)
     await subTaskDrawer.getByPlaceholder(/pay rent/i).fill(taskOne)
     await subTaskDrawer.getByRole('button', { name: 'Add task' }).click()
     await expect(page.getByRole('link', { name: taskOne })).toBeVisible()
