@@ -264,16 +264,15 @@ test.describe('Daily view smoke', () => {
     await page.getByRole('tab', { name: 'Week' }).click()
     await expect(page.getByRole('region', { name: 'Week' })).toBeVisible()
     const weekRegion = page.getByRole('region', { name: 'Week' })
-    const dayButtons = weekRegion.getByRole('button')
-    await expect(dayButtons.first()).toBeVisible()
-    const count = await dayButtons.count()
-    expect(count).toBeGreaterThanOrEqual(2)
-    const secondDay = dayButtons.nth(1)
-    await secondDay.click()
+    const nonTodayButton = weekRegion.locator(
+      'button:not(:has-text("Today"))',
+    ).first()
+    await expect(nonTodayButton).toBeVisible()
+    await nonTodayButton.click()
     await expect(page).toHaveURL(/\?.*date=\d{4}-\d{2}-\d{2}/)
     await expect(page).toHaveURL(/\?.*view=week/)
     await expect(page.getByRole('tab', { name: 'Week', selected: true })).toBeVisible()
-    await expect(secondDay).toHaveAttribute('aria-pressed', 'true')
+    await expect(nonTodayButton).toHaveAttribute('aria-pressed', 'true')
     const currentUrl = new URL(page.url())
     const selectedDate = currentUrl.searchParams.get('date')
     expect(selectedDate).toBeTruthy()
@@ -291,6 +290,28 @@ test.describe('Daily view smoke', () => {
       .evaluate((form: HTMLFormElement) => form.requestSubmit())
     await expect(drawer).not.toBeVisible()
     await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 45000 })
+  })
+
+  test('selected week day carries into Day view until Today', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('tab', { name: 'Week' }).click()
+    const weekRegion = page.getByRole('region', { name: 'Week' })
+    const nonTodayButton = weekRegion.locator(
+      'button:not(:has-text("Today"))',
+    ).first()
+    await expect(nonTodayButton).toBeVisible()
+    await nonTodayButton.click()
+    const urlAfterSelect = new URL(page.url())
+    const selectedDate = urlAfterSelect.searchParams.get('date')
+    expect(selectedDate).toBeTruthy()
+
+    await page.getByRole('tab', { name: 'Day' }).click()
+    await expect(page.getByRole('tab', { name: 'Day', selected: true })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`\\?[^#]*date=${selectedDate}`))
+    await expect(page).toHaveURL(/\?.*view=day/)
+    await expect(page.getByText(/Today - \w+/)).not.toBeVisible()
   })
 
   test('creation drawer task form has due date field defaulting to selected day', async ({

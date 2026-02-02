@@ -414,6 +414,10 @@ function DailyView() {
     () => startOfDayUTCFromDate(new Date()),
     [],
   )
+  const isSelectedToday = dayStartMs === todayStartMs
+  const selectedDateParam = isSelectedToday
+    ? undefined
+    : toYYYYMMDDUTC(selectedDate)
   const daySectionRefs = useRef(new Map<number, HTMLElement>())
   const [pendingScrollTo, setPendingScrollTo] = useState<number | null>(null)
 
@@ -528,7 +532,7 @@ function DailyView() {
     navigate({
       search: {
         view,
-        date: toYYYYMMDDUTC(d),
+        date: nextDayStart === todayStartMs ? undefined : toYYYYMMDDUTC(d),
       },
     })
   }
@@ -548,7 +552,9 @@ function DailyView() {
                 type="button"
                 role="tab"
                 aria-selected={view === mode}
-                onClick={() => navigate({ search: { view: mode } })}
+                onClick={() =>
+                  navigate({ search: { view: mode, date: selectedDateParam } })
+                }
                 className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${view === mode
                   ? 'bg-slate-700 text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
