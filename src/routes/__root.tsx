@@ -7,8 +7,6 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { Toaster } from 'sonner'
 
-import Header from '../components/Header'
-
 import ConvexProvider from '../integrations/convex/provider'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -58,7 +56,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </a>
         <ConvexProvider>
           <Toaster richColors position="top-center" />
-          <Header />
           {children}
           <TanStackDevtools
             config={{
