@@ -80,12 +80,16 @@ export function CreationDrawer({
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
   const showParentInfo = parentTaskId != null
+  const allowRepeat = !showParentInfo
 
   useEffect(() => {
     if (open) {
       setTaskDueDate(
         toDateInputValue(defaultDueDate ?? new Date()),
       )
+    }
+    if (showParentInfo) {
+      setRepeatEnabled(false)
     }
   }, [open, parentTaskId, defaultDueDate])
 
@@ -97,7 +101,8 @@ export function CreationDrawer({
       title: trimmed,
       parentTaskId: showParentInfo ? parentTaskId : undefined,
       dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : undefined,
-      frequency: repeatEnabled && taskFrequency ? taskFrequency : undefined,
+      frequency:
+        allowRepeat && repeatEnabled && taskFrequency ? taskFrequency : undefined,
     })
     setTaskTitle('')
   }
@@ -165,47 +170,51 @@ export function CreationDrawer({
                 aria-label="Due date"
               />
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="task-repeat"
-                checked={repeatEnabled}
-                onChange={(e) => setRepeatEnabled(e.target.checked)}
-                className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
-                aria-label="Repeat task"
-              />
-              <label
-                htmlFor="task-repeat"
-                className="text-sm font-medium text-muted-foreground"
-              >
-                Repeat
-              </label>
-            </div>
-            {repeatEnabled && (
-              <div>
-                <label
-                  htmlFor="task-frequency"
-                  className="mb-2 block text-sm font-medium text-muted-foreground"
-                >
-                  Frequency
-                </label>
-                <select
-                  id="task-frequency"
-                  value={taskFrequency}
-                  onChange={(e) =>
-                    setTaskFrequency(e.target.value as TaskFrequency)
-                  }
-                  className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground focus:border-ring focus:outline-none"
-                  aria-label="Repeat frequency"
-                >
-                  {FREQUENCY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {allowRepeat ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="task-repeat"
+                    checked={repeatEnabled}
+                    onChange={(e) => setRepeatEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
+                    aria-label="Repeat task"
+                  />
+                  <label
+                    htmlFor="task-repeat"
+                    className="text-sm font-medium text-muted-foreground"
+                  >
+                    Repeat
+                  </label>
+                </div>
+                {repeatEnabled && (
+                  <div>
+                    <label
+                      htmlFor="task-frequency"
+                      className="mb-2 block text-sm font-medium text-muted-foreground"
+                    >
+                      Frequency
+                    </label>
+                    <select
+                      id="task-frequency"
+                      value={taskFrequency}
+                      onChange={(e) =>
+                        setTaskFrequency(e.target.value as TaskFrequency)
+                      }
+                      className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground focus:border-ring focus:outline-none"
+                      aria-label="Repeat frequency"
+                    >
+                      {FREQUENCY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
+            ) : null}
             <Button
               type="submit"
               className="h-10 w-full px-6 sm:w-auto"

@@ -15,23 +15,36 @@ import type { Id } from '../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): {
+    date?: string
+  } => {
+    const date =
+      typeof search.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
+        ? search.date
+        : undefined
+    return { date }
+  },
   component: TaskDetail,
 })
 
 function TaskDetail() {
   const { taskId } = Route.useParams()
-  const todayStartMs = startOfDayUTCFromDate(new Date())
+  const { date: dateStr } = Route.useSearch()
+  const selectedDate = dateStr
+    ? new Date(`${dateStr}T00:00:00.000Z`)
+    : new Date()
+  const dayStartMs = startOfDayUTCFromDate(selectedDate)
   const task = useQuery(api.todos.getTask, { id: taskId as Id<'tasks'> })
   const ancestors = useQuery(api.todos.listTaskAncestors, {
     taskId: taskId as Id<'tasks'>,
   })
   const children = useQuery(api.todos.listTaskChildren, {
     taskId: taskId as Id<'tasks'>,
-    dayStartMs: todayStartMs,
+    dayStartMs,
   })
   const completion = useQuery(api.todos.getTaskCompletion, {
     taskId: taskId as Id<'tasks'>,
-    dayStartMs: todayStartMs,
+    dayStartMs,
   })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
@@ -168,13 +181,13 @@ function TaskDetail() {
       await setTaskCompletion({
         taskId: id,
         completed: nextCompleted,
-        completedDateMs: todayStartMs,
+        completedDateMs: dayStartMs,
       })
       if (shouldCompleteParent) {
         await setTaskCompletion({
           taskId: taskId as Id<'tasks'>,
           completed: true,
-          completedDateMs: todayStartMs,
+          completedDateMs: dayStartMs,
         })
       }
     } catch (error) {
@@ -199,7 +212,7 @@ function TaskDetail() {
       await setTaskCompletion({
         taskId: taskId as Id<'tasks'>,
         completed: true,
-        completedDateMs: todayStartMs,
+        completedDateMs: dayStartMs,
       })
     } catch (error) {
       toast.error(
@@ -228,7 +241,7 @@ function TaskDetail() {
             className="h-9 w-fit px-4"
             aria-label="Back to Daily view"
           >
-            <Link to="/">
+            <Link to="/" search={dateStr ? { date: dateStr } : undefined}>
               Go Back
             </Link>
           </Button>
@@ -248,6 +261,7 @@ function TaskDetail() {
             >
               <Link
                 to="/"
+                search={dateStr ? { date: dateStr } : undefined}
                 className="hover:text-foreground"
               >
                 Daily
@@ -258,6 +272,7 @@ function TaskDetail() {
                   <Link
                     to="/tasks/$taskId"
                     params={{ taskId: ancestor._id }}
+                    search={dateStr ? { date: dateStr } : undefined}
                     className="hover:text-foreground"
                   >
                     {ancestor.title}
@@ -325,7 +340,7 @@ function TaskDetail() {
             parentTaskId={task?._id ?? (taskId as Id<'tasks'>)}
             parentTaskTitle={task?.title}
             title="Add sub-task"
-            defaultDueDate={new Date()}
+            defaultDueDate={selectedDate}
           />
         </div>
 
@@ -447,6 +462,7 @@ function TaskDetail() {
                             <Link
                               to="/tasks/$taskId"
                               params={{ taskId: child._id }}
+                              search={dateStr ? { date: dateStr } : undefined}
                               className={`flex-1 truncate text-left ${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
                                 }`}
                             >

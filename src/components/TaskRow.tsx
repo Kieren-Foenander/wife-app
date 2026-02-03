@@ -15,6 +15,7 @@ export function TaskRow({
   cancelEditing,
   handleDelete,
   handleComplete,
+  dateSearch,
 }: {
   task: { _id: Id<'tasks'>; title: string }
   editingTaskId: Id<'tasks'> | null
@@ -27,7 +28,11 @@ export function TaskRow({
   cancelEditing: (id: Id<'tasks'>) => void
   handleDelete: (id: Id<'tasks'>) => void
   handleComplete: (id: Id<'tasks'>, currentCompleted: boolean) => void
+  dateSearch?: string
 }) {
+  const taskHref = dateSearch
+    ? `/tasks/${task._id}?date=${dateSearch}`
+    : `/tasks/${task._id}`
   return (
     <li
       className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${
@@ -80,7 +85,7 @@ export function TaskRow({
               aria-label={`Mark ${task.title} complete`}
             />
             <a
-              href={`/tasks/${task._id}`}
+              href={taskHref}
               className={`flex-1 truncate text-left ${
                 isCompleted
                   ? 'text-muted-foreground line-through'

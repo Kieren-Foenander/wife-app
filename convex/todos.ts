@@ -68,6 +68,14 @@ type TaskForDue = {
   frequency?: Frequency
 }
 
+type TaskWithParent = TaskForDue & {
+  parentTaskId?: Id<'tasks'>
+}
+
+function isRecurringTask(task: TaskWithParent | null | undefined): boolean {
+  return task?.frequency != null && task.parentTaskId == null
+}
+
 async function getLatestCompletionDate(
   ctx: QueryCtx,
   taskId: Id<'tasks'>,
@@ -145,18 +153,31 @@ async function isTaskCompletedWithChildrenForDay(
   ctx: QueryCtx,
   taskId: Id<'tasks'>,
   dayStartMs: number,
+  scopeNonRecurringToDay = false,
 ): Promise<boolean> {
   const task = await ctx.db.get(taskId)
   if (!task) return false
+  const isRecurringSelf = isRecurringTask(task)
+  const forceDayScope = scopeNonRecurringToDay || isRecurringSelf
   const children = await ctx.db
     .query('tasks')
     .withIndex('byParentTaskId', (q) => q.eq('parentTaskId', taskId))
     .collect()
   if (children.length === 0) {
+    if (forceDayScope && !isRecurringSelf) {
+      return await isTaskCompletedOnDay(ctx, task._id, dayStartMs)
+    }
     return await isTaskCompletedForDay(ctx, task, dayStartMs)
   }
   for (const child of children) {
-    if (!(await isTaskCompletedWithChildrenForDay(ctx, child._id, dayStartMs))) {
+    if (
+      !(await isTaskCompletedWithChildrenForDay(
+        ctx,
+        child._id,
+        dayStartMs,
+        forceDayScope,
+      ))
+    ) {
       return false
     }
   }
@@ -197,6 +218,20 @@ async function collectTaskAndDescendantIds(
   return allTaskIds
 }
 
+async function hasRecurringAncestor(
+  ctx: QueryCtx | MutationCtx,
+  taskId: Id<'tasks'>,
+): Promise<boolean> {
+  let current = await ctx.db.get(taskId)
+  while (current?.parentTaskId) {
+    const parent = await ctx.db.get(current.parentTaskId)
+    if (!parent) break
+    if (parent.frequency != null) return true
+    current = parent
+  }
+  return false
+}
+
 async function ensureTaskCompleted(
   ctx: MutationCtx,
   taskId: Id<'tasks'>,
@@ -225,12 +260,19 @@ async function completeTaskTree(
   ctx: MutationCtx,
   taskId: Id<'tasks'>,
   completedDate: number,
+  forceDayScopeForNonRecurring = false,
 ): Promise<Array<Id<'tasks'>>> {
   const allTaskIds = await collectTaskAndDescendantIds(ctx, taskId)
   for (const id of allTaskIds) {
     const task = await ctx.db.get(id)
     if (!task) continue
-    await ensureTaskCompleted(ctx, id, completedDate, task.frequency != null)
+    const isRecurringSelf = isRecurringTask(task)
+    await ensureTaskCompleted(
+      ctx,
+      id,
+      completedDate,
+      isRecurringSelf || forceDayScopeForNonRecurring,
+    )
   }
   return allTaskIds
 }
@@ -240,6 +282,7 @@ async function areAllChildrenCompleted(
   parentId: Id<'tasks'>,
   optimisticCompletedIds?: Set<Id<'tasks'>>,
   dayStartMs?: number,
+  scopeNonRecurringToDay?: boolean,
 ): Promise<boolean> {
   const children = await ctx.db
     .query('tasks')
@@ -250,7 +293,8 @@ async function areAllChildrenCompleted(
     if (optimisticCompletedIds?.has(child._id)) {
       continue
     }
-    if (dayStartMs != null && child.frequency != null) {
+    const isRecurringChild = isRecurringTask(child)
+    if (dayStartMs != null && (isRecurringChild || scopeNonRecurringToDay)) {
       if (!(await isTaskCompletedOnDay(ctx, child._id, dayStartMs))) {
         return false
       }
@@ -268,25 +312,31 @@ async function syncAncestorsOnComplete(
   taskId: Id<'tasks'>,
   completedDate: number,
   optimisticCompletedIds?: Set<Id<'tasks'>>,
+  forceDayScopeForNonRecurring = false,
 ): Promise<void> {
   const dayStartMs = startOfDayUTC(completedDate)
   let current = await ctx.db.get(taskId)
+  let forceDayScope = forceDayScopeForNonRecurring
   while (current?.parentTaskId) {
     const parentId = current.parentTaskId
+    const parent = await ctx.db.get(parentId)
+    if (!parent) break
+    if (isRecurringTask(parent)) {
+      forceDayScope = true
+    }
     const allCompleted = await areAllChildrenCompleted(
       ctx,
       parentId,
       optimisticCompletedIds,
       dayStartMs,
+      forceDayScope,
     )
     if (!allCompleted) break
-    const parent = await ctx.db.get(parentId)
-    if (!parent) break
     await ensureTaskCompleted(
       ctx,
       parentId,
       completedDate,
-      parent.frequency != null,
+      isRecurringTask(parent) || forceDayScope,
     )
     optimisticCompletedIds?.add(parentId)
     current = await ctx.db.get(parentId)
@@ -467,6 +517,10 @@ export const listTaskChildren = query({
   args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const dayStartMs = args.dayStartMs ?? startOfDayUTC(Date.now())
+    const parent = await ctx.db.get(args.taskId)
+    const scopeNonRecurringToDay =
+      isRecurringTask(parent) ||
+      (await hasRecurringAncestor(ctx, args.taskId))
     const children = await ctx.db
       .query('tasks')
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', args.taskId))
@@ -478,6 +532,7 @@ export const listTaskChildren = query({
           ctx,
           task._id,
           dayStartMs,
+          scopeNonRecurringToDay,
         )
         return {
           ...task,
@@ -497,6 +552,10 @@ export const getTaskCompletion = query({
   args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const dayStartMs = args.dayStartMs ?? startOfDayUTC(Date.now())
+    const rootTask = await ctx.db.get(args.taskId)
+    const scopeNonRecurringToDay =
+      isRecurringTask(rootTask) ||
+      (await hasRecurringAncestor(ctx, args.taskId))
     const queue: Array<Id<'tasks'>> = [args.taskId]
     const allTaskIds: Array<Id<'tasks'>> = []
     while (queue.length > 0) {
@@ -513,7 +572,14 @@ export const getTaskCompletion = query({
     }
     let completed = 0
     for (const taskId of allTaskIds) {
-      if (await isTaskCompletedWithChildrenForDay(ctx, taskId, dayStartMs)) {
+      if (
+        await isTaskCompletedWithChildrenForDay(
+          ctx,
+          taskId,
+          dayStartMs,
+          scopeNonRecurringToDay,
+        )
+      ) {
         completed += 1
       }
     }
@@ -706,6 +772,9 @@ export const createTask = mutation({
     frequency: v.optional(frequencyValidator),
   },
   handler: async (ctx, args) => {
+    if (args.parentTaskId && args.frequency != null) {
+      throw new Error('Sub-tasks cannot be recurring.')
+    }
     return await ctx.db.insert('tasks', {
       title: args.title,
       parentTaskId: args.parentTaskId,
@@ -726,6 +795,9 @@ export const updateTask = mutation({
     const task = await ctx.db.get(args.id)
     if (!task) {
       throw new Error('Task not found')
+    }
+    if (task.parentTaskId && args.frequency !== undefined) {
+      throw new Error('Sub-tasks cannot be recurring.')
     }
     const patch: {
       title?: string
@@ -786,7 +858,16 @@ export const completeTaskAndSubtasks = mutation({
   args: { taskId: v.id('tasks'), completedDateMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const now = args.completedDateMs ?? Date.now()
-    const ids = await completeTaskTree(ctx, args.taskId, now)
+    const task = await ctx.db.get(args.taskId)
+    const scopeNonRecurringToDay =
+      isRecurringTask(task) ||
+      (await hasRecurringAncestor(ctx, args.taskId))
+    const ids = await completeTaskTree(
+      ctx,
+      args.taskId,
+      now,
+      scopeNonRecurringToDay,
+    )
     return { inserted: ids.length }
   },
 })
@@ -799,22 +880,27 @@ export const setTaskCompletion = mutation({
   },
   handler: async (ctx, args) => {
     const completedDate = args.completedDateMs ?? Date.now()
+    const task = await ctx.db.get(args.taskId)
+    const scopeNonRecurringToDay =
+      isRecurringTask(task) ||
+      (await hasRecurringAncestor(ctx, args.taskId))
     if (args.completed) {
       const completedIds = await completeTaskTree(
         ctx,
         args.taskId,
         completedDate,
+        scopeNonRecurringToDay,
       )
       await syncAncestorsOnComplete(
         ctx,
         args.taskId,
         completedDate,
         new Set(completedIds),
+        scopeNonRecurringToDay,
       )
       return { completed: true }
     }
-    const task = await ctx.db.get(args.taskId)
-    if (task?.frequency == null) {
+    if (!scopeNonRecurringToDay) {
       await clearTaskTreeCompletions(ctx, args.taskId)
       await clearAncestorCompletions(ctx, args.taskId)
       return { completed: false }

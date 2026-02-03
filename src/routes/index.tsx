@@ -372,6 +372,7 @@ function DailyView() {
                       cancelEditing={cancelTaskEditing}
                       handleDelete={handleTaskDelete}
                       handleComplete={handleTaskToggle}
+                      dateSearch={dateStr}
                     />
                   )
                 })}
