@@ -224,9 +224,38 @@ function TaskDetail() {
     }
   }
 
-  const isFullyComplete = completion
-    ? completion.completed >= completion.total
+  const isFullyComplete = effectiveCompletion
+    ? effectiveCompletion.completed >= effectiveCompletion.total
     : false
+
+  const handleParentCompleteClick = async () => {
+    if (!completion) {
+      return
+    }
+    // If everything is already complete, un-complete the parent and its subtree.
+    if (isFullyComplete) {
+      setIsCompletingAll(true)
+      setTaskCompletionOverrides({})
+      try {
+        await setTaskCompletion({
+          taskId: taskId as Id<'tasks'>,
+          completed: false,
+          completedDateMs: dayStartMs,
+        })
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to un-complete tasks.',
+        )
+      } finally {
+        setIsCompletingAll(false)
+      }
+      return
+    }
+    // Otherwise, complete the parent and all sub-tasks.
+    void handleCompleteAll()
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -300,24 +329,27 @@ function TaskDetail() {
             </div>
           ) : task ? (
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold text-foreground">
-                {task.title}
-              </h1>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  className="h-6 w-6 rounded-full border-2 border-input bg-background text-foreground accent-primary appearance-none checked:bg-primary checked:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  checked={isFullyComplete}
+                  onChange={handleParentCompleteClick}
+                  disabled={isCompletingAll || !completion}
+                  aria-label={
+                    isFullyComplete
+                      ? 'Mark this task and all sub-tasks incomplete'
+                      : 'Mark this task and all sub-tasks complete'
+                  }
+                />
+                <h1 className="text-3xl font-semibold text-foreground">
+                  {task.title}
+                </h1>
+              </div>
               <TaskCompletionIndicator
                 taskId={task._id}
                 completionOverride={effectiveCompletion}
               />
-              <Button
-                variant="secondary"
-                className="h-9 w-fit px-4"
-                onClick={handleCompleteAll}
-                disabled={isFullyComplete || isCompletingAll}
-                aria-label={
-                  isCompletingAll ? 'Completing all tasks' : 'Complete all tasks'
-                }
-              >
-                {isCompletingAll ? 'Completing...' : 'Complete all'}
-              </Button>
             </div>
           ) : (
             <h1 className="text-3xl font-semibold text-foreground">
