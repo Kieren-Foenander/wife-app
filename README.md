@@ -31,6 +31,37 @@ To build this application for production:
 pnpm build
 ```
 
+## Deployment (Cloudflare + Convex prod)
+
+**1. Convex production deployment**
+
+- Each Convex project has one production deployment. Deploy your backend to prod:
+  ```bash
+  npx convex deploy
+  ```
+- In the [Convex dashboard](https://dashboard.convex.dev) → your project → **Deployments**, note the production deployment URL (e.g. `https://<deployment-name>.convex.cloud`).
+
+**2. Point the app at Convex prod when deploying**
+
+- `VITE_CONVEX_URL` is baked in at **build** time. For production builds, set it to your **production** Convex URL (not the dev one in `.env.local`).
+- Example for a one-off deploy:
+  ```bash
+  VITE_CONVEX_URL=https://<your-prod-deployment>.convex.cloud pnpm deploy
+  ```
+- Or create a `.env.production` (or use your CI/env) with:
+  ```
+  VITE_CONVEX_URL=https://<your-prod-deployment>.convex.cloud
+  ```
+  and run `pnpm deploy` in that environment so the build uses prod Convex.
+
+**3. Deploy the frontend to Cloudflare**
+
+- From the repo root (with prod Convex URL set as above):
+  ```bash
+  pnpm deploy
+  ```
+- This runs `vite build` then `wrangler deploy`. The app will be live at your `*.workers.dev` subdomain or any custom domain configured in the [Cloudflare dashboard](https://dash.cloudflare.com).
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
