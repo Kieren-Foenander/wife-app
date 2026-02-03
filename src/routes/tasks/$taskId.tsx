@@ -10,6 +10,7 @@ import { ListRowSkeleton } from '../../components/ui/skeleton'
 import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
 import { TaskCompletionIndicator } from '../../components/TaskCompletionIndicator'
+import { startOfDayUTCFromDate } from '../../lib/dateUtils'
 import type { Id } from '../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/tasks/$taskId')({
@@ -19,15 +20,21 @@ export const Route = createFileRoute('/tasks/$taskId')({
 
 function TaskDetail() {
   const { taskId } = Route.useParams()
+  const todayStartMs = useMemo(
+    () => startOfDayUTCFromDate(new Date()),
+    [],
+  )
   const task = useQuery(api.todos.getTask, { id: taskId as Id<'tasks'> })
   const ancestors = useQuery(api.todos.listTaskAncestors, {
     taskId: taskId as Id<'tasks'>,
   })
   const children = useQuery(api.todos.listTaskChildren, {
     taskId: taskId as Id<'tasks'>,
+    dayStartMs: todayStartMs,
   })
   const completion = useQuery(api.todos.getTaskCompletion, {
     taskId: taskId as Id<'tasks'>,
+    dayStartMs: todayStartMs,
   })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
@@ -161,11 +168,16 @@ function TaskDetail() {
         return override ?? child.isCompleted
       })
     try {
-      await setTaskCompletion({ taskId: id, completed: nextCompleted })
+      await setTaskCompletion({
+        taskId: id,
+        completed: nextCompleted,
+        completedDateMs: todayStartMs,
+      })
       if (shouldCompleteParent) {
         await setTaskCompletion({
           taskId: taskId as Id<'tasks'>,
           completed: true,
+          completedDateMs: todayStartMs,
         })
       }
     } catch (error) {
@@ -190,6 +202,7 @@ function TaskDetail() {
       await setTaskCompletion({
         taskId: taskId as Id<'tasks'>,
         completed: true,
+        completedDateMs: todayStartMs,
       })
     } catch (error) {
       toast.error(
@@ -208,7 +221,7 @@ function TaskDetail() {
     <div className="min-h-screen bg-background text-foreground">
       <main
         id="main-content"
-        className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-16"
+        className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-4"
         aria-label="Task detail"
       >
         <header className="space-y-3">
@@ -218,8 +231,8 @@ function TaskDetail() {
             className="h-9 w-fit px-4"
             aria-label="Back to Daily view"
           >
-            <Link to="/" search={{ view: 'day' }}>
-              Back to Daily
+            <Link to="/">
+              Go Back
             </Link>
           </Button>
           {ancestors === undefined || task === undefined ? (
@@ -238,7 +251,6 @@ function TaskDetail() {
             >
               <Link
                 to="/"
-                search={{ view: 'day' }}
                 className="hover:text-foreground"
               >
                 Daily

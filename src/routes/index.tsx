@@ -1,373 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { CreationDrawer } from '../components/CreationDrawer'
+import { MonthGrid } from '../components/MonthGrid'
+import { TaskRow } from '../components/TaskRow'
+import { WeekStrip } from '../components/WeekStrip'
+import {
+  addDaysUTC,
+  addMonthsUTC,
+  fromYYYYMMDD,
+  getWeekDatesFor,
+  startOfDayUTCFromDate,
+  toYYYYMMDDUTC,
+} from '../lib/dateUtils'
 import { Button } from '../components/ui/button'
 import { ListRowSkeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
-export type ViewMode = 'day' | 'week' | 'month'
-
-/** Format date as YYYY-MM-DD (UTC). */
-function toYYYYMMDDUTC(d: Date): string {
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-/** Parse YYYY-MM-DD to Date at midnight UTC. */
-function fromYYYYMMDD(s: string): Date {
-  const [y, m = 1, d = 1] = s.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d))
-}
-
-/** UTC start-of-day ms for a Date (uses UTC date parts). */
-function startOfDayUTCFromDate(d: Date): number {
-  return Date.UTC(
-    d.getUTCFullYear(),
-    d.getUTCMonth(),
-    d.getUTCDate(),
-  )
-}
-
-/** Week Sunday–Saturday (en-US) containing the given date; dates at midnight UTC. */
-function getWeekDatesFor(selectedDate: Date): Array<Date> {
-  const d = new Date(selectedDate)
-  const day = d.getUTCDay()
-  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day))
-  const dates: Array<Date> = []
-  for (let i = 0; i < 7; i++) {
-    dates.push(new Date(start.getTime() + i * 24 * 60 * 60 * 1000))
-  }
-  return dates
-}
-
-/** Month grid (6×7) for the given date; cells are Date (midnight UTC) or null. */
-function getMonthGridFor(selectedDate: Date): Array<Array<Date | null>> {
-  const year = selectedDate.getUTCFullYear()
-  const month = selectedDate.getUTCMonth()
-  const first = new Date(Date.UTC(year, month, 1))
-  const firstDay = first.getUTCDay()
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  const grid: Array<Array<Date | null>> = []
-  let dayIndex = 1 - firstDay
-  for (let row = 0; row < 6; row++) {
-    const week: Array<Date | null> = []
-    for (let col = 0; col < 7; col++) {
-      if (dayIndex < 1 || dayIndex > daysInMonth) {
-        week.push(null)
-      } else {
-        week.push(new Date(Date.UTC(year, month, dayIndex)))
-      }
-      dayIndex++
-    }
-    grid.push(week)
-  }
-  return grid
-}
-
-/** Month dates (1..last day) for the given date; dates at midnight UTC. */
-function getMonthDatesFor(selectedDate: Date): Array<Date> {
-  const year = selectedDate.getUTCFullYear()
-  const month = selectedDate.getUTCMonth()
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  return Array.from({ length: daysInMonth }, (_, index) =>
-    new Date(Date.UTC(year, month, index + 1)),
-  )
-}
-
-function WeekStrip({
-  selectedDate,
-  onSelectDay,
-}: {
-  selectedDate: Date
-  onSelectDay: (d: Date) => void
-}) {
-  const weekDates = useMemo(
-    () => getWeekDatesFor(selectedDate),
-    [selectedDate],
-  )
-  const todayUTC = useMemo(
-    () =>
-      new Date(
-        Date.UTC(
-          new Date().getUTCFullYear(),
-          new Date().getUTCMonth(),
-          new Date().getUTCDate(),
-        ),
-      ),
-    [],
-  )
-
-  return (
-    <section
-      role="region"
-      aria-label="Week"
-      className="overflow-x-auto rounded-2xl border border-border bg-card/70 p-4"
-    >
-      <div className="flex min-w-0 gap-2">
-        {weekDates.map((d) => {
-          const isToday =
-            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
-            d.getUTCMonth() === todayUTC.getUTCMonth() &&
-            d.getUTCDate() === todayUTC.getUTCDate()
-          const isSelected =
-            d.getTime() === startOfDayUTCFromDate(selectedDate)
-          return (
-            <button
-              type="button"
-              key={d.toISOString()}
-              onClick={() => onSelectDay(d)}
-              className={`flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-3 transition-colors ${isSelected
-                ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
-                : isToday
-                  ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
-                  : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
-                }`}
-              aria-label={d.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-              })}
-              aria-pressed={isSelected}
-            >
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {d.toLocaleDateString('en-US', { weekday: 'short' })}
-              </span>
-              <span className="text-lg font-semibold tabular-nums">
-                {d.getUTCDate()}
-              </span>
-              {isToday ? (
-                <span className="rounded bg-accent/70 px-2 py-0.5 text-xs font-medium text-accent-foreground">
-                  Today
-                </span>
-              ) : null}
-            </button>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-function MonthGrid({
-  selectedDate,
-  onSelectDay,
-}: {
-  selectedDate: Date
-  onSelectDay: (d: Date) => void
-}) {
-  const grid = useMemo(
-    () => getMonthGridFor(selectedDate),
-    [selectedDate],
-  )
-  const todayUTC = useMemo(
-    () =>
-      new Date(
-        Date.UTC(
-          new Date().getUTCFullYear(),
-          new Date().getUTCMonth(),
-          new Date().getUTCDate(),
-        ),
-      ),
-    [],
-  )
-
-  return (
-    <section
-      role="region"
-      aria-label="Month"
-      className="overflow-x-auto rounded-2xl border border-border bg-card/70 p-4"
-    >
-      <div className="grid min-w-0 grid-cols-7 gap-1">
-        {WEEKDAY_LABELS.map((label) => (
-          <div
-            key={label}
-            className="py-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            {label}
-          </div>
-        ))}
-        {grid.flat().map((d, i) => {
-          if (d === null) {
-            return (
-              <div
-                key={`empty-${i}`}
-                className="aspect-square rounded-lg border border-border/70 bg-background/40 p-1 text-muted-foreground/80"
-              />
-            )
-          }
-          const isToday =
-            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
-            d.getUTCMonth() === todayUTC.getUTCMonth() &&
-            d.getUTCDate() === todayUTC.getUTCDate()
-          const isSelected = d.getTime() === startOfDayUTCFromDate(selectedDate)
-          return (
-            <button
-              type="button"
-              key={d.toISOString()}
-              onClick={() => onSelectDay(d)}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
-                ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
-                : isToday
-                  ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
-                  : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
-                }`}
-              aria-label={d.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-              aria-pressed={isSelected}
-            >
-              <span className="text-sm font-medium tabular-nums">
-                {d.getUTCDate()}
-              </span>
-              {isToday ? (
-                <span className="rounded bg-accent/70 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
-                  Today
-                </span>
-              ) : null}
-            </button>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-function TaskRow({
-  task,
-  editingTaskId,
-  draftTitle,
-  setDraftTitle,
-  isCompleted,
-  celebratingTaskId,
-  startEditing,
-  saveEditing,
-  cancelEditing,
-  handleDelete,
-  handleComplete,
-}: {
-  task: { _id: Id<'tasks'>; title: string }
-  editingTaskId: Id<'tasks'> | null
-  draftTitle: string
-  setDraftTitle: (value: string) => void
-  isCompleted: boolean
-  celebratingTaskId: Id<'tasks'> | null
-  startEditing: (id: Id<'tasks'>, currentTitle: string) => void
-  saveEditing: (id: Id<'tasks'>, currentTitle: string) => void
-  cancelEditing: (id: Id<'tasks'>) => void
-  handleDelete: (id: Id<'tasks'>) => void
-  handleComplete: (id: Id<'tasks'>, currentCompleted: boolean) => void
-}) {
-  return (
-    <li
-      className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${celebratingTaskId === task._id ? 'animate-completion-bounce' : ''
-        }`}
-    >
-      {editingTaskId === task._id ? (
-        <>
-          <input
-            type="text"
-            value={draftTitle}
-            onChange={(event) => setDraftTitle(event.target.value)}
-            className="h-9 flex-1 rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
-            aria-label="Rename task"
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              className="h-9 px-4"
-              disabled={!draftTitle.trim() || draftTitle.trim() === task.title}
-              onClick={() => saveEditing(task._id, task.title)}
-              aria-label="Save task title"
-            >
-              Save
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-9 px-4"
-              onClick={() => cancelEditing(task._id)}
-              aria-label="Cancel renaming task"
-            >
-              Cancel
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <ListTodo className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
-          <label className="flex flex-1 items-center gap-3">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
-              checked={isCompleted}
-              onChange={() => handleComplete(task._id, isCompleted)}
-              aria-label={`Mark ${task.title} complete`}
-            />
-            <a
-              href={`/tasks/${task._id}`}
-              className={`flex-1 truncate text-left ${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
-                }`}
-            >
-              {task.title}
-            </a>
-          </label>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-9 px-4"
-              onClick={() => startEditing(task._id, task.title)}
-              aria-label={`Rename task ${task.title}`}
-            >
-              Rename
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              className="h-9 px-4"
-              onClick={() => handleDelete(task._id)}
-              aria-label={`Delete task ${task.title}`}
-            >
-              Delete
-            </Button>
-          </div>
-        </>
-      )}
-    </li>
-  )
-}
-
 export const Route = createFileRoute('/')({
   ssr: false,
   validateSearch: (search: Record<string, unknown>): {
-    view: ViewMode
     date?: string
   } => {
-    const view = search.view
-    const viewMode: ViewMode =
-      view === 'week' || view === 'month' ? view : 'day'
     const date =
       typeof search.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
         ? search.date
         : undefined
-    return { view: viewMode, date }
+    return { date }
   },
   component: DailyView,
 })
 
 function DailyView() {
-  const { view, date: dateStr } = Route.useSearch()
+  const { date: dateStr } = Route.useSearch()
   const navigate = useNavigate({ from: '/' })
   const selectedDate = useMemo(
     () =>
@@ -378,6 +48,7 @@ function DailyView() {
     () => startOfDayUTCFromDate(selectedDate),
     [selectedDate],
   )
+  const [rangeMode, setRangeMode] = useState<'week' | 'month'>('week')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
   const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
@@ -395,39 +66,16 @@ function DailyView() {
   const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
     dayStartMs,
   })
-  const dayStartMsList = useMemo(() => {
-    if (view === 'week') {
-      return getWeekDatesFor(selectedDate).map(startOfDayUTCFromDate)
-    }
-    if (view === 'month') {
-      return getMonthDatesFor(selectedDate).map(startOfDayUTCFromDate)
-    }
-    return [dayStartMs]
-  }, [dayStartMs, selectedDate, view])
-  const rootTasksByDay = useQuery(api.todos.listRootTasksDueByDay, {
-    dayStartMs: view === 'day' ? [] : dayStartMsList,
-  })
   const rootTasks = rootTasksDueOnDate ?? []
-  const hasAnyTasks =
-    rootTasksByDay?.some((section) => section.tasks.length > 0) ?? false
   const todayStartMs = useMemo(
     () => startOfDayUTCFromDate(new Date()),
     [],
   )
   const isSelectedToday = dayStartMs === todayStartMs
-  const selectedDateParam = isSelectedToday
-    ? undefined
-    : toYYYYMMDDUTC(selectedDate)
-  const daySectionRefs = useRef(new Map<number, HTMLElement>())
-  const [pendingScrollTo, setPendingScrollTo] = useState<number | null>(null)
 
   useEffect(() => {
-    if (pendingScrollTo == null || view === 'day') return
-    const node = daySectionRefs.current.get(pendingScrollTo)
-    if (!node) return
-    node.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    setPendingScrollTo(null)
-  }, [pendingScrollTo, rootTasksByDay, view])
+    setTaskCompletionOverrides({})
+  }, [dayStartMs])
 
   const handleAddTask = async (params: {
     title: string
@@ -518,7 +166,11 @@ function DailyView() {
       [id]: nextCompleted,
     }))
     try {
-      await setTaskCompletion({ taskId: id, completed: nextCompleted })
+      await setTaskCompletion({
+        taskId: id,
+        completed: nextCompleted,
+        completedDateMs: dayStartMs,
+      })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update task.',
@@ -527,51 +179,70 @@ function DailyView() {
   }
 
   const handleSelectDay = (d: Date) => {
-    const nextDayStart = startOfDayUTCFromDate(d)
-    setPendingScrollTo(nextDayStart)
     navigate({
       search: {
-        view,
-        date: nextDayStart === todayStartMs ? undefined : toYYYYMMDDUTC(d),
+        date:
+          startOfDayUTCFromDate(d) === todayStartMs
+            ? undefined
+            : toYYYYMMDDUTC(d),
       },
     })
   }
 
   const handleResetToday = () => {
-    setPendingScrollTo(view === 'day' ? null : todayStartMs)
     navigate({
       search: {
-        view,
         date: undefined,
       },
     })
   }
 
+  const handleShiftRange = (direction: 'prev' | 'next') => {
+    const delta = direction === 'prev' ? -1 : 1
+    const nextDate =
+      rangeMode === 'month'
+        ? addMonthsUTC(selectedDate, delta)
+        : addDaysUTC(selectedDate, 7 * delta)
+    handleSelectDay(nextDate)
+  }
+
+  const rangeLabel =
+    rangeMode === 'month'
+      ? selectedDate.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      })
+      : (() => {
+        const weekStart = getWeekDatesFor(selectedDate)[0]
+        return `Week of ${weekStart.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}`
+      })()
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main
         id="main-content"
-        className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 pb-32 pt-16"
+        className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 pb-32 pt-4"
         aria-label="Daily view"
       >
         <header className="space-y-4">
-          <p className="text-center text-xs font-semibold text-muted-foreground">
+          <p className="text-center text-xl font-semibold text-muted-foreground">
             Wife App
           </p>
           <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
-              {view === 'day'
-                ? toYYYYMMDDUTC(selectedDate) === toYYYYMMDDUTC(new Date())
-                  ? `Today - ${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}`
-                  : selectedDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })
-                : view === 'week'
-                  ? 'Weekly'
-                  : 'Monthly'}
+              {isSelectedToday
+                ? `Today - ${selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                })}`
+                : selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
             </p>
             <h1 className="text-4xl font-semibold text-foreground">
               Tasks
@@ -582,17 +253,62 @@ function DailyView() {
           </div>
         </header>
 
-        {view === 'week' ? (
-          <WeekStrip
-            selectedDate={selectedDate}
-            onSelectDay={handleSelectDay}
-          />
-        ) : view === 'month' ? (
-          <MonthGrid
-            selectedDate={selectedDate}
-            onSelectDay={handleSelectDay}
-          />
-        ) : null}
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/70 px-4 py-3">
+
+            <div className="flex rounded-full border border-border p-1">
+              {(['week', 'month'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setRangeMode(mode)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${rangeMode === mode
+                    ? 'bg-primary/20 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  aria-pressed={rangeMode === mode}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              {rangeLabel}
+            </span>
+            <div className="flex items-center w-full justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => handleShiftRange('prev')}
+                className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={
+                  rangeMode === 'month' ? 'Previous month' : 'Previous week'
+                }
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => handleShiftRange('next')}
+                className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={rangeMode === 'month' ? 'Next month' : 'Next week'}
+              >
+                Next
+              </button>
+            </div>
+
+          </div>
+          {rangeMode === 'month' ? (
+            <MonthGrid
+              selectedDate={selectedDate}
+              onSelectDay={handleSelectDay}
+            />
+          ) : (
+            <WeekStrip
+              selectedDate={selectedDate}
+              onSelectDay={handleSelectDay}
+            />
+          )}
+        </section>
 
         <div className="flex flex-col gap-4 sm:flex-row">
           <Button
@@ -614,16 +330,10 @@ function DailyView() {
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <ListTodo className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden />
-            {view === 'day'
-              ? 'Your tasks'
-              : view === 'week'
-                ? 'Tasks due this week'
-                : 'Tasks due this month'}
+            Your tasks
           </h2>
           <div className="rounded-2xl border border-border bg-card/70 p-6">
-            {(view === 'day'
-              ? rootTasksDueOnDate === undefined
-              : rootTasksByDay === undefined) ? (
+            {rootTasksDueOnDate === undefined ? (
               <div className="flex flex-col items-center gap-4 py-8" role="status" aria-label="Loading tasks">
                 <Spinner aria-label="Loading tasks" size={24} />
                 <p className="text-sm text-muted-foreground">Loading tasks...</p>
@@ -633,12 +343,12 @@ function DailyView() {
                   ))}
                 </ul>
               </div>
-            ) : view === 'day' && rootTasks.length === 0 ? (
+            ) : rootTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center" role="status" aria-label="No tasks">
                 <ClipboardList className="size-12 text-muted-foreground" strokeWidth={1.25} aria-hidden />
                 <div className="space-y-1">
                   <p className="text-base font-medium text-foreground">
-                    No tasks due today
+                    No tasks due on this day
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Add a task to see it here.
@@ -647,113 +357,32 @@ function DailyView() {
               </div>
             ) : (
               <ul className="space-y-6">
-                {view === 'day'
-                  ? rootTasks.map((task) => {
-                    const draftTitle = draftTaskTitles[task._id] ?? ''
-                    const isCompleted =
-                      taskCompletionOverrides[task._id] ?? task.isCompleted
-                    return (
-                      <TaskRow
-                        key={task._id}
-                        task={task}
-                        editingTaskId={editingTaskId}
-                        draftTitle={draftTitle}
-                        setDraftTitle={(value) =>
-                          setDraftTaskTitles((prev) => ({
-                            ...prev,
-                            [task._id]: value,
-                          }))
-                        }
-                        isCompleted={isCompleted}
-                        celebratingTaskId={celebratingTaskId}
-                        startEditing={startTaskEditing}
-                        saveEditing={saveTaskEditing}
-                        cancelEditing={cancelTaskEditing}
-                        handleDelete={handleTaskDelete}
-                        handleComplete={handleTaskToggle}
-                      />
-                    )
-                  })
-                  : rootTasksByDay?.map(
-                    ({ dayStartMs: sectionStartMs, tasks }) => {
-                    const sectionDate = new Date(sectionStartMs)
-                    const label = sectionDate.toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric',
-                    })
-                    const isToday = sectionStartMs === todayStartMs
-                    return (
-                      <li
-                        key={sectionStartMs}
-                        ref={(node) => {
-                          if (node) {
-                            daySectionRefs.current.set(sectionStartMs, node)
-                          } else {
-                            daySectionRefs.current.delete(sectionStartMs)
-                          }
-                        }}
-                        className="scroll-mt-24 space-y-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-base font-semibold text-foreground">
-                              {label}
-                            </h3>
-                            {isToday ? (
-                              <span className="rounded bg-accent/70 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-accent-foreground">
-                                Today
-                              </span>
-                            ) : null}
-                          </div>
-                          <span className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                            {view === 'week' ? 'Week' : 'Month'}
-                          </span>
-                        </div>
-                        {tasks.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No tasks due.
-                          </p>
-                        ) : (
-                          <ul className="space-y-2">
-                            {tasks.map((task) => {
-                              const draftTitle = draftTaskTitles[task._id] ?? ''
-                              const isCompleted =
-                                taskCompletionOverrides[task._id] ??
-                                task.isCompleted
-                              return (
-                                <TaskRow
-                                  key={`${sectionStartMs}-${task._id}`}
-                                  task={task}
-                                  editingTaskId={editingTaskId}
-                                  draftTitle={draftTitle}
-                                  setDraftTitle={(value) =>
-                                    setDraftTaskTitles((prev) => ({
-                                      ...prev,
-                                      [task._id]: value,
-                                    }))
-                                  }
-                                  isCompleted={isCompleted}
-                                  celebratingTaskId={celebratingTaskId}
-                                  startEditing={startTaskEditing}
-                                  saveEditing={saveTaskEditing}
-                                  cancelEditing={cancelTaskEditing}
-                                  handleDelete={handleTaskDelete}
-                                  handleComplete={handleTaskToggle}
-                                />
-                              )
-                    },
-                  )}
-                          </ul>
-                        )}
-                      </li>
-                    )
-                  })}
-                {!hasAnyTasks && view !== 'day' ? (
-                  <li className="rounded-xl border border-dashed border-border bg-background/50 p-4 text-sm text-muted-foreground">
-                    No tasks due this {view}.
-                  </li>
-                ) : null}
+                {rootTasks.map((task) => {
+                  const draftTitle = draftTaskTitles[task._id] ?? ''
+                  const isCompleted =
+                    taskCompletionOverrides[task._id] ?? task.isCompleted
+                  return (
+                    <TaskRow
+                      key={task._id}
+                      task={task}
+                      editingTaskId={editingTaskId}
+                      draftTitle={draftTitle}
+                      setDraftTitle={(value) =>
+                        setDraftTaskTitles((prev) => ({
+                          ...prev,
+                          [task._id]: value,
+                        }))
+                      }
+                      isCompleted={isCompleted}
+                      celebratingTaskId={celebratingTaskId}
+                      startEditing={startTaskEditing}
+                      saveEditing={saveTaskEditing}
+                      cancelEditing={cancelTaskEditing}
+                      handleDelete={handleTaskDelete}
+                      handleComplete={handleTaskToggle}
+                    />
+                  )
+                })}
               </ul>
             )}
           </div>
@@ -762,34 +391,35 @@ function DailyView() {
       {!isSelectedToday ? (
         <Button
           type="button"
-          className="fixed bottom-24 right-6 z-20 h-12 rounded-full px-5 text-base shadow-lg"
+          className="fixed top-24 right-6 z-20 h-12 rounded-full px-5 text-base shadow-lg"
           onClick={handleResetToday}
           aria-label="Jump to today"
         >
-          Today
+          Jump to Today
         </Button>
       ) : null}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/90 backdrop-blur">
         <div
           className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2 px-6 py-3"
-          role="tablist"
-          aria-label="View mode"
+          role="navigation"
+          aria-label="Primary"
         >
-          {(['day', 'week', 'month'] as const).map((mode) => (
+          <a
+            href="/"
+            className="flex-1 rounded-full bg-primary/20 px-3 py-2 text-center text-sm font-semibold uppercase tracking-wide text-foreground shadow-sm"
+            aria-current="page"
+          >
+            Home
+          </a>
+          {['Calendar', 'Insights'].map((label) => (
             <button
-              key={mode}
+              key={label}
               type="button"
-              role="tab"
-              aria-selected={view === mode}
-              onClick={() =>
-                navigate({ search: { view: mode, date: selectedDateParam } })
-              }
-              className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold uppercase tracking-wide transition-colors ${view === mode
-                ? 'bg-primary/20 text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-                }`}
+              className="flex-1 cursor-not-allowed rounded-full px-3 py-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+              aria-disabled="true"
+              tabIndex={-1}
             >
-              {mode === 'day' ? 'Day' : mode === 'week' ? 'Week' : 'Month'}
+              {label}
             </button>
           ))}
         </div>

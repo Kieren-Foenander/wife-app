@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
 
 import { api } from '../../convex/_generated/api'
+import { startOfDayUTCFromDate } from '../lib/dateUtils'
 import type { Id } from '../../convex/_generated/dataModel'
 
 type TaskCompletionIndicatorProps = {
@@ -12,7 +14,14 @@ export function TaskCompletionIndicator({
   taskId,
   completionOverride,
 }: TaskCompletionIndicatorProps) {
-  const completionFromQuery = useQuery(api.todos.getTaskCompletion, { taskId })
+  const todayStartMs = useMemo(
+    () => startOfDayUTCFromDate(new Date()),
+    [],
+  )
+  const completionFromQuery = useQuery(api.todos.getTaskCompletion, {
+    taskId,
+    dayStartMs: todayStartMs,
+  })
   const completion = completionOverride ?? completionFromQuery
 
   if (!completion || completion.total === 0) {
