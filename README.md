@@ -33,34 +33,21 @@ pnpm build
 
 ## Deployment (Cloudflare + Convex prod)
 
-**1. Convex production deployment**
+**1. Convex production deploy key (required for CI)**
 
-- Each Convex project has one production deployment. Deploy your backend to prod:
-  ```bash
-  npx convex deploy
-  ```
-- In the [Convex dashboard](https://dashboard.convex.dev) → your project → **Deployments**, note the production deployment URL (e.g. `https://<deployment-name>.convex.cloud`).
+- In CI (e.g. Cloudflare) there is no interactive login. Use a **production deploy key** so `convex deploy` can run without auth.
+- [Convex dashboard](https://dashboard.convex.dev) → your project → **Settings** → **Deploy keys** → create a **production** deploy key.
+- In Cloudflare: **Workers & Pages** → your project → **Settings** → **Environment variables** → add `CONVEX_DEPLOY_KEY` (secret) with that key. Do the same for **Build** so the build step can run `convex deploy`.
+- Also set `VITE_CONVEX_URL` to your **production** Convex URL (e.g. `https://<your-prod-deployment>.convex.cloud`) in the same env so the built app talks to prod.
 
-**2. Point the app at Convex prod when deploying**
+**2. What `pnpm run deploy` does**
 
-- `VITE_CONVEX_URL` is baked in at **build** time. For production builds, set it to your **production** Convex URL (not the dev one in `.env.local`).
-- Example for a one-off deploy:
-  ```bash
-  VITE_CONVEX_URL=https://<your-prod-deployment>.convex.cloud pnpm deploy
-  ```
-- Or create a `.env.production` (or use your CI/env) with:
-  ```
-  VITE_CONVEX_URL=https://<your-prod-deployment>.convex.cloud
-  ```
-  and run `pnpm deploy` in that environment so the build uses prod Convex.
+- If `CONVEX_DEPLOY_KEY` is set: runs `convex deploy` (push backend to prod), then `vite build`, then `wrangler deploy`.
+- If `CONVEX_DEPLOY_KEY` is not set: skips `convex deploy` and only runs `vite build && wrangler deploy` (deploy Convex separately, e.g. locally with `npx convex deploy`).
 
-**3. Deploy the frontend to Cloudflare**
+**3. Build command in Cloudflare**
 
-- From the repo root (with prod Convex URL set as above):
-  ```bash
-  pnpm deploy
-  ```
-- This runs `vite build` then `wrangler deploy`. The app will be live at your `*.workers.dev` subdomain or any custom domain configured in the [Cloudflare dashboard](https://dash.cloudflare.com).
+- Use a single build command: **`pnpm run deploy`** (no separate wrangler step). Ensure `CONVEX_DEPLOY_KEY` and `VITE_CONVEX_URL` are set for the build environment so Convex is deployed and the app points at prod.
 
 ## Testing
 
