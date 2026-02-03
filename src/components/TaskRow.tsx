@@ -1,4 +1,5 @@
-import { ListTodo } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Pencil, Trash2 } from 'lucide-react'
 
 import type { Id } from '../../convex/_generated/dataModel'
 import { Button } from './ui/button'
@@ -9,6 +10,7 @@ export function TaskRow({
   draftTitle,
   setDraftTitle,
   isCompleted,
+  subtaskCompletion,
   celebratingTaskId,
   startEditing,
   saveEditing,
@@ -22,6 +24,7 @@ export function TaskRow({
   draftTitle: string
   setDraftTitle: (value: string) => void
   isCompleted: boolean
+  subtaskCompletion?: { total: number; completed: number }
   celebratingTaskId: Id<'tasks'> | null
   startEditing: (id: Id<'tasks'>, currentTitle: string) => void
   saveEditing: (id: Id<'tasks'>, currentTitle: string) => void
@@ -30,9 +33,9 @@ export function TaskRow({
   handleComplete: (id: Id<'tasks'>, currentCompleted: boolean) => void
   dateSearch?: string
 }) {
-  const taskHref = dateSearch
-    ? `/tasks/${task._id}?date=${dateSearch}`
-    : `/tasks/${task._id}`
+  const taskLinkSearch = dateSearch ? { date: dateSearch } : undefined
+  const showSubtaskCompletion =
+    subtaskCompletion && subtaskCompletion.total > 0
   return (
     <li
       className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${
@@ -71,21 +74,18 @@ export function TaskRow({
         </>
       ) : (
         <>
-          <ListTodo
-            className="size-5 shrink-0 text-muted-foreground"
-            strokeWidth={1.5}
-            aria-hidden
-          />
           <label className="flex flex-1 items-center gap-3">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
+              className="h-6 w-6 rounded-full border-2 border-input bg-background text-foreground accent-primary appearance-none checked:bg-primary checked:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               checked={isCompleted}
               onChange={() => handleComplete(task._id, isCompleted)}
               aria-label={`Mark ${task.title} complete`}
             />
-            <a
-              href={taskHref}
+            <Link
+              to="/tasks/$taskId"
+              params={{ taskId: task._id }}
+              search={taskLinkSearch}
               className={`flex-1 truncate text-left ${
                 isCompleted
                   ? 'text-muted-foreground line-through'
@@ -93,26 +93,31 @@ export function TaskRow({
               }`}
             >
               {task.title}
-            </a>
+            </Link>
           </label>
-          <div className="flex items-center gap-2">
+          {showSubtaskCompletion ? (
+            <span className="rounded-full border border-border bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+              {subtaskCompletion.completed}/{subtaskCompletion.total} subtasks
+            </span>
+          ) : null}
+          <div className="flex items-center gap-1">
             <Button
               type="button"
-              variant="secondary"
-              className="h-9 px-4"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => startEditing(task._id, task.title)}
               aria-label={`Rename task ${task.title}`}
             >
-              Rename
+              <Pencil />
             </Button>
             <Button
               type="button"
-              variant="destructive"
-              className="h-9 px-4"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => handleDelete(task._id)}
               aria-label={`Delete task ${task.title}`}
             >
-              Delete
+              <Trash2 className="text-destructive" />
             </Button>
           </div>
         </>

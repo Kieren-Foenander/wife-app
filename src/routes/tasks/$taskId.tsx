@@ -5,6 +5,7 @@ import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { CreationDrawer } from '../../components/CreationDrawer'
+import { TaskRow } from '../../components/TaskRow'
 import { Button } from '../../components/ui/button'
 import { ListRowSkeleton } from '../../components/ui/skeleton'
 import { Spinner } from '../../components/ui/spinner'
@@ -389,111 +390,32 @@ function TaskDetail() {
                 </div>
               </div>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-6">
                 {children.tasks.map((child) => {
                   const isCompleted =
                     taskCompletionOverrides[child._id] ?? child.isCompleted
-                  const trimmedDraftTitle = (
-                    draftTitles[child._id] ?? ''
-                  ).trim()
                   return (
-                    <li
+                    <TaskRow
                       key={child._id}
-                      className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card/70 px-4 py-3 text-sm text-foreground ${celebratingTaskId === child._id ? 'animate-completion-bounce' : ''
-                        }`}
-                    >
-                      {editingTaskId === child._id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={draftTitles[child._id] ?? ''}
-                            onChange={(event) =>
-                              setDraftTitles((prev) => ({
-                                ...prev,
-                                [child._id]: event.target.value,
-                              }))
-                            }
-                            className="h-9 flex-1 rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
-                            aria-label="Rename task"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              className="h-9 px-4"
-                              disabled={
-                                !trimmedDraftTitle ||
-                                trimmedDraftTitle === child.title
-                              }
-                              onClick={() =>
-                                saveTaskEditing(child._id, child.title)
-                              }
-                              aria-label="Save task title"
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() => cancelTaskEditing(child._id)}
-                              aria-label="Cancel renaming task"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <ListTodo
-                            className="size-5 shrink-0 text-muted-foreground"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <label className="flex flex-1 items-center gap-3">
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-input bg-background text-foreground accent-primary"
-                              checked={isCompleted}
-                              onChange={() =>
-                                handleCompleteTask(child._id, isCompleted)
-                              }
-                              aria-label={`Mark ${child.title} complete`}
-                            />
-                            <Link
-                              to="/tasks/$taskId"
-                              params={{ taskId: child._id }}
-                              search={dateStr ? { date: dateStr } : undefined}
-                              className={`flex-1 truncate text-left ${isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
-                                }`}
-                            >
-                              {child.title}
-                            </Link>
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="h-9 px-4"
-                              onClick={() =>
-                                startTaskEditing(child._id, child.title)
-                              }
-                              aria-label={`Rename task ${child.title}`}
-                            >
-                              Rename
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              className="h-9 px-4"
-                              onClick={() => handleDeleteTask(child._id)}
-                              aria-label={`Delete task ${child.title}`}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
+                      task={child}
+                      editingTaskId={editingTaskId}
+                      draftTitle={draftTitles[child._id] ?? ''}
+                      setDraftTitle={(value) =>
+                        setDraftTitles((prev) => ({
+                          ...prev,
+                          [child._id]: value,
+                        }))
+                      }
+                      isCompleted={isCompleted}
+                      subtaskCompletion={child.subtaskCompletion}
+                      celebratingTaskId={celebratingTaskId}
+                      startEditing={startTaskEditing}
+                      saveEditing={saveTaskEditing}
+                      cancelEditing={cancelTaskEditing}
+                      handleDelete={handleDeleteTask}
+                      handleComplete={handleCompleteTask}
+                      dateSearch={dateStr}
+                    />
                   )
                 })}
               </ul>

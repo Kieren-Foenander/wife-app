@@ -366,6 +366,7 @@ function DailyView() {
                         }))
                       }
                       isCompleted={isCompleted}
+                      subtaskCompletion={task.subtaskCompletion}
                       celebratingTaskId={celebratingTaskId}
                       startEditing={startTaskEditing}
                       saveEditing={saveTaskEditing}
@@ -402,9 +403,9 @@ function DailyView() {
             className="flex-1 rounded-full bg-primary/20 px-3 py-2 text-center text-sm font-semibold uppercase tracking-wide text-foreground shadow-sm"
             aria-current="page"
           >
-            Home
+            Tasks
           </a>
-          {['Calendar', 'Insights'].map((label) => (
+          {['Gym (soon)', 'calories (soon)'].map((label) => (
             <button
               key={label}
               type="button"

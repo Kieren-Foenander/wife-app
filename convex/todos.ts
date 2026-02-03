@@ -528,15 +528,19 @@ export const listTaskChildren = query({
       .collect()
     const tasks = await Promise.all(
       children.map(async (task) => {
-        const isCompleted = await isTaskCompletedWithChildrenForDay(
-          ctx,
-          task._id,
-          dayStartMs,
-          scopeNonRecurringToDay,
-        )
+        const [isCompleted, subtaskCompletion] = await Promise.all([
+          isTaskCompletedWithChildrenForDay(
+            ctx,
+            task._id,
+            dayStartMs,
+            scopeNonRecurringToDay,
+          ),
+          getDirectChildCompletionForDay(ctx, task._id, dayStartMs),
+        ])
         return {
           ...task,
           isCompleted,
+          subtaskCompletion,
         }
       }),
     )
@@ -547,6 +551,40 @@ export const listTaskChildren = query({
     return { tasks, completion }
   },
 })
+
+async function getDirectChildCompletionForDay(
+  ctx: QueryCtx,
+  taskId: Id<'tasks'>,
+  dayStartMs: number,
+) {
+  const parent = await ctx.db.get(taskId)
+  if (!parent) {
+    return { total: 0, completed: 0 }
+  }
+  const scopeNonRecurringToDay =
+    isRecurringTask(parent) || (await hasRecurringAncestor(ctx, taskId))
+  const children = await ctx.db
+    .query('tasks')
+    .withIndex('byParentTaskId', q => q.eq('parentTaskId', taskId))
+    .collect()
+  if (children.length === 0) {
+    return { total: 0, completed: 0 }
+  }
+  let completed = 0
+  for (const child of children) {
+    if (
+      await isTaskCompletedWithChildrenForDay(
+        ctx,
+        child._id,
+        dayStartMs,
+        scopeNonRecurringToDay,
+      )
+    ) {
+      completed += 1
+    }
+  }
+  return { total: children.length, completed }
+}
 
 export const getTaskCompletion = query({
   args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
@@ -649,14 +687,17 @@ export const listRootTasksDueOnDate = query({
         isTaskDueOnDay(task, args.dayStartMs, now, latestCompletedDate),
       )
     return await Promise.all(
-      dueTasks.map(async ({ task }) => ({
-        ...task,
-        isCompleted: await isTaskCompletedWithChildrenForDay(
-          ctx,
-          task._id,
-          args.dayStartMs,
-        ),
-      })),
+      dueTasks.map(async ({ task }) => {
+        const [isCompleted, subtaskCompletion] = await Promise.all([
+          isTaskCompletedWithChildrenForDay(ctx, task._id, args.dayStartMs),
+          getDirectChildCompletionForDay(ctx, task._id, args.dayStartMs),
+        ])
+        return {
+          ...task,
+          isCompleted,
+          subtaskCompletion,
+        }
+      }),
     )
   },
 })
