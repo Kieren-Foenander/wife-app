@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
@@ -20,10 +20,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 
 function TaskDetail() {
   const { taskId } = Route.useParams()
-  const todayStartMs = useMemo(
-    () => startOfDayUTCFromDate(new Date()),
-    [],
-  )
+  const todayStartMs = startOfDayUTCFromDate(new Date())
   const task = useQuery(api.todos.getTask, { id: taskId as Id<'tasks'> })
   const ancestors = useQuery(api.todos.listTaskAncestors, {
     taskId: taskId as Id<'tasks'>,
@@ -50,7 +47,7 @@ function TaskDetail() {
   const deleteTask = useMutation(api.todos.deleteTask)
   const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
 
-  const effectiveCompletion = useMemo(() => {
+  const effectiveCompletion = (() => {
     if (!completion) return undefined
     const overrideCount = Object.values(taskCompletionOverrides).filter(Boolean)
       .length
@@ -71,7 +68,7 @@ function TaskDetail() {
       total: completion.total,
       completed,
     }
-  }, [completion, children, taskCompletionOverrides])
+  })()
 
   const handleAddTask = async (params: {
     title: string

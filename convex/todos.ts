@@ -71,12 +71,18 @@ type TaskForDue = {
 async function getLatestCompletionDate(
   ctx: QueryCtx,
   taskId: Id<'tasks'>,
+  beforeOrOnMs?: number,
 ): Promise<number | undefined> {
-  const latest = await ctx.db
+  const query = ctx.db
     .query('completedTasks')
-    .withIndex('by_task_id_completed_date', (q) => q.eq('taskId', taskId))
+    .withIndex('by_task_id_completed_date', (q) => {
+      const base = q.eq('taskId', taskId)
+      return beforeOrOnMs == null
+        ? base
+        : base.lte('completedDate', beforeOrOnMs)
+    })
     .order('desc')
-    .first()
+  const latest = await query.first()
   return latest?.completedDate
 }
 
@@ -556,6 +562,7 @@ export const listRootTasksDueOnDate = query({
   args: { dayStartMs: v.number() },
   handler: async (ctx, args) => {
     const now = Date.now()
+    const dayEndMs = args.dayStartMs + MS_PER_DAY - 1
     const rootTasks = await ctx.db
       .query('tasks')
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
@@ -564,7 +571,11 @@ export const listRootTasksDueOnDate = query({
     const withLatestCompletion = await Promise.all(
       rootTasks.map(async (task) => ({
         task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
+        latestCompletedDate: await getLatestCompletionDate(
+          ctx,
+          task._id,
+          dayEndMs,
+        ),
       })),
     )
     const dueTasks = withLatestCompletion
@@ -594,14 +605,19 @@ export const listRootTasksDueByDay = query({
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
-    const withLatestCompletion = await Promise.all(
-      rootTasks.map(async (task) => ({
-        task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
-      })),
-    )
     return await Promise.all(
       args.dayStartMs.map(async (dayStartMs) => {
+        const dayEndMs = dayStartMs + MS_PER_DAY - 1
+        const withLatestCompletion = await Promise.all(
+          rootTasks.map(async (task) => ({
+            task,
+            latestCompletedDate: await getLatestCompletionDate(
+              ctx,
+              task._id,
+              dayEndMs,
+            ),
+          })),
+        )
         const tasks = await Promise.all(
           withLatestCompletion
             .filter(({ task, latestCompletedDate }) =>
@@ -636,7 +652,7 @@ export const listRootTasksDueInWeek = query({
     const withLatestCompletion = await Promise.all(
       rootTasks.map(async (task) => ({
         task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
+        latestCompletedDate: await getLatestCompletionDate(ctx, task._id, end),
       })),
     )
     const dueTasks = withLatestCompletion
@@ -666,7 +682,7 @@ export const listRootTasksDueInMonth = query({
     const withLatestCompletion = await Promise.all(
       rootTasks.map(async (task) => ({
         task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id),
+        latestCompletedDate: await getLatestCompletionDate(ctx, task._id, end),
       })),
     )
     const dueTasks = withLatestCompletion

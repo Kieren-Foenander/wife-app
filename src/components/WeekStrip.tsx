@@ -1,5 +1,3 @@
-import { useMemo } from 'react'
-
 import { getWeekDatesFor, startOfDayUTCFromDate } from '../lib/dateUtils'
 
 export function WeekStrip({
@@ -9,20 +7,13 @@ export function WeekStrip({
   selectedDate: Date
   onSelectDay: (d: Date) => void
 }) {
-  const weekDates = useMemo(
-    () => getWeekDatesFor(selectedDate),
-    [selectedDate],
-  )
-  const todayUTC = useMemo(
-    () =>
-      new Date(
-        Date.UTC(
-          new Date().getUTCFullYear(),
-          new Date().getUTCMonth(),
-          new Date().getUTCDate(),
-        ),
-      ),
-    [],
+  const weekDates = getWeekDatesFor(selectedDate)
+  const todayUTC = new Date(
+    Date.UTC(
+      new Date().getUTCFullYear(),
+      new Date().getUTCMonth(),
+      new Date().getUTCDate(),
+    ),
   )
 
   return (

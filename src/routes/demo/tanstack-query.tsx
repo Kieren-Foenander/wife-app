@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
@@ -29,10 +29,10 @@ function TanStackQueryDemo() {
 
   const [todo, setTodo] = useState('')
 
-  const submitTodo = useCallback(async () => {
+  const submitTodo = async () => {
     await addTodo(todo)
     setTodo('')
-  }, [addTodo, todo])
+  }
 
   return (
     <div

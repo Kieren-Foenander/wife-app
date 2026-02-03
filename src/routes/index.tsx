@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
@@ -39,15 +39,10 @@ export const Route = createFileRoute('/')({
 function DailyView() {
   const { date: dateStr } = Route.useSearch()
   const navigate = useNavigate({ from: '/' })
-  const selectedDate = useMemo(
-    () =>
-      dateStr ? fromYYYYMMDD(dateStr) : fromYYYYMMDD(toYYYYMMDDUTC(new Date())),
-    [dateStr],
-  )
-  const dayStartMs = useMemo(
-    () => startOfDayUTCFromDate(selectedDate),
-    [selectedDate],
-  )
+  const selectedDate = dateStr
+    ? fromYYYYMMDD(dateStr)
+    : fromYYYYMMDD(toYYYYMMDDUTC(new Date()))
+  const dayStartMs = startOfDayUTCFromDate(selectedDate)
   const [rangeMode, setRangeMode] = useState<'week' | 'month'>('week')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
@@ -67,10 +62,7 @@ function DailyView() {
     dayStartMs,
   })
   const rootTasks = rootTasksDueOnDate ?? []
-  const todayStartMs = useMemo(
-    () => startOfDayUTCFromDate(new Date()),
-    [],
-  )
+  const todayStartMs = startOfDayUTCFromDate(new Date())
   const isSelectedToday = dayStartMs === todayStartMs
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { Circle, Plus, Trash2 } from 'lucide-react'
@@ -18,19 +18,16 @@ function ConvexTodos() {
 
   const [newTask, setNewTask] = useState('')
 
-  const handleAddTask = useCallback(async () => {
+  const handleAddTask = async () => {
     if (newTask.trim()) {
       await addTask({ title: newTask.trim() })
       setNewTask('')
     }
-  }, [addTask, newTask])
+  }
 
-  const handleRemoveTask = useCallback(
-    async (id: Id<'tasks'>) => {
-      await deleteTask({ id })
-    },
-    [deleteTask],
-  )
+  const handleRemoveTask = async (id: Id<'tasks'>) => {
+    await deleteTask({ id })
+  }
 
   const totalCount = tasks?.length || 0
 

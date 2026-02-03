@@ -1,5 +1,3 @@
-import { useMemo } from 'react'
-
 import { getMonthGridFor, startOfDayUTCFromDate } from '../lib/dateUtils'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -11,20 +9,13 @@ export function MonthGrid({
   selectedDate: Date
   onSelectDay: (d: Date) => void
 }) {
-  const grid = useMemo(
-    () => getMonthGridFor(selectedDate),
-    [selectedDate],
-  )
-  const todayUTC = useMemo(
-    () =>
-      new Date(
-        Date.UTC(
-          new Date().getUTCFullYear(),
-          new Date().getUTCMonth(),
-          new Date().getUTCDate(),
-        ),
-      ),
-    [],
+  const grid = getMonthGridFor(selectedDate)
+  const todayUTC = new Date(
+    Date.UTC(
+      new Date().getUTCFullYear(),
+      new Date().getUTCMonth(),
+      new Date().getUTCDate(),
+    ),
   )
 
   return (
