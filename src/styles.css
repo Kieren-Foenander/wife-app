@@ -16,6 +16,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input {
+  @apply !text-base
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
@@ -150,12 +154,15 @@ code {
   0% {
     transform: scale(1);
   }
+
   40% {
     transform: scale(1.06);
   }
+
   70% {
     transform: scale(0.98);
   }
+
   100% {
     transform: scale(1);
   }
@@ -169,6 +176,7 @@ code {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -183,6 +191,7 @@ code {
   overflow: hidden;
   z-index: 100;
 }
+
 .skip-link:focus {
   position: fixed;
   left: 1rem;
