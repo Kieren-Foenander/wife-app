@@ -52,7 +52,7 @@ export function MonthGrid({
               type="button"
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
+              className={`relative flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
                 ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
                 : isToday
                   ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
@@ -68,7 +68,7 @@ export function MonthGrid({
                 {d.getUTCDate()}
               </span>
               {isToday ? (
-                <span className="rounded bg-accent/70 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+                <span className="pointer-events-none absolute -right-4 -top-2 rounded bg-accent/70 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-accent-foreground rotate-12">
                   Today
                 </span>
               ) : null}
