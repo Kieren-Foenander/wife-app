@@ -29,12 +29,17 @@ export function addMonthsUTC(d: Date, months: number): Date {
   )
 }
 
-/** Week Sunday–Saturday (en-US) containing the given date; dates at midnight UTC. */
+/** Week Monday–Sunday containing the given date; dates at midnight UTC. */
 export function getWeekDatesFor(selectedDate: Date): Array<Date> {
   const d = new Date(selectedDate)
   const day = d.getUTCDay()
+  const mondayIndex = (day + 6) % 7
   const start = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day),
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate() - mondayIndex,
+    ),
   )
   const dates: Array<Date> = []
   for (let i = 0; i < 7; i++) {
@@ -50,7 +55,7 @@ export function getMonthGridFor(
   const year = selectedDate.getUTCFullYear()
   const month = selectedDate.getUTCMonth()
   const first = new Date(Date.UTC(year, month, 1))
-  const firstDay = first.getUTCDay()
+  const firstDay = (first.getUTCDay() + 6) % 7
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
   const grid: Array<Array<Date | null>> = []
   let dayIndex = 1 - firstDay

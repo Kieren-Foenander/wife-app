@@ -1,6 +1,6 @@
 import { getMonthGridFor, startOfDayUTCFromDate } from '../lib/dateUtils'
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function MonthGrid({
   selectedDate,
@@ -53,10 +53,10 @@ export function MonthGrid({
               key={d.toISOString()}
               onClick={() => onSelectDay(d)}
               className={`flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors ${isSelected
-                  ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
-                  : isToday
-                    ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
-                    : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
+                ? 'border-primary/40 bg-primary/20 text-foreground ring-2 ring-primary/30'
+                : isToday
+                  ? 'border-primary/30 bg-primary/10 text-foreground hover:bg-primary/20'
+                  : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
                 month: 'short',

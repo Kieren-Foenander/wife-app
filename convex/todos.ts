@@ -23,6 +23,26 @@ function startOfDayUTC(ms: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 }
 
+const DAY_INTERVALS: Record<
+  Exclude<Frequency, 'monthly' | 'quarterly' | '6-monthly' | 'yearly'>,
+  number
+> = {
+  daily: 1,
+  'bi-daily': 2,
+  weekly: 7,
+  fortnightly: 14,
+}
+
+const MONTH_INTERVALS: Record<
+  Extract<Frequency, 'monthly' | 'quarterly' | '6-monthly' | 'yearly'>,
+  number
+> = {
+  monthly: 1,
+  quarterly: 3,
+  '6-monthly': 6,
+  yearly: 12,
+}
+
 /** Add months to a date (UTC), clamping day if needed). */
 function addMonthsUTC(ms: number, months: number): number {
   const d = new Date(ms)
@@ -38,31 +58,6 @@ function addMonthsUTC(ms: number, months: number): number {
   )
 }
 
-/** Next due date (start of day UTC) after lastCompletedDate for given frequency. */
-function nextDueAfter(lastCompletedMs: number, frequency: Frequency): number {
-  const start = startOfDayUTC(lastCompletedMs)
-  switch (frequency) {
-    case 'daily':
-      return start + MS_PER_DAY
-    case 'bi-daily':
-      return start + 2 * MS_PER_DAY
-    case 'weekly':
-      return start + 7 * MS_PER_DAY
-    case 'fortnightly':
-      return start + 14 * MS_PER_DAY
-    case 'monthly':
-      return addMonthsUTC(start, 1)
-    case 'quarterly':
-      return addMonthsUTC(start, 3)
-    case '6-monthly':
-      return addMonthsUTC(start, 6)
-    case 'yearly':
-      return addMonthsUTC(start, 12)
-    default:
-      return start + MS_PER_DAY
-  }
-}
-
 type TaskForDue = {
   dueDate?: number
   frequency?: Frequency
@@ -74,24 +69,6 @@ type TaskWithParent = TaskForDue & {
 
 function isRecurringTask(task: TaskWithParent | null | undefined): boolean {
   return task?.frequency != null && task.parentTaskId == null
-}
-
-async function getLatestCompletionDate(
-  ctx: QueryCtx,
-  taskId: Id<'tasks'>,
-  beforeOrOnMs?: number,
-): Promise<number | undefined> {
-  const query = ctx.db
-    .query('completedTasks')
-    .withIndex('by_task_id_completed_date', (q) => {
-      const base = q.eq('taskId', taskId)
-      return beforeOrOnMs == null
-        ? base
-        : base.lte('completedDate', beforeOrOnMs)
-    })
-    .order('desc')
-  const latest = await query.first()
-  return latest?.completedDate
 }
 
 async function isTaskCompletedAny(
@@ -386,56 +363,82 @@ async function clearTaskTreeCompletions(
   }
 }
 
+function getFirstDueMs(task: TaskForDue, refNowMs: number): number {
+  return task.dueDate ?? startOfDayUTC(refNowMs)
+}
+
+function isRecurringDueOnDay(
+  task: TaskForDue & { frequency: Frequency },
+  dayStartMs: number,
+  refNowMs: number,
+): boolean {
+  const firstDue = getFirstDueMs(task, refNowMs)
+  if (dayStartMs < firstDue) return false
+  if (task.frequency in DAY_INTERVALS) {
+    const intervalDays =
+      DAY_INTERVALS[task.frequency as keyof typeof DAY_INTERVALS]
+    const intervalMs = intervalDays * MS_PER_DAY
+    return (dayStartMs - firstDue) % intervalMs === 0
+  }
+  const intervalMonths =
+    MONTH_INTERVALS[task.frequency as keyof typeof MONTH_INTERVALS]
+  const first = new Date(firstDue)
+  const target = new Date(dayStartMs)
+  const monthsDiff =
+    (target.getUTCFullYear() - first.getUTCFullYear()) * 12 +
+    (target.getUTCMonth() - first.getUTCMonth())
+  if (monthsDiff % intervalMonths !== 0) return false
+  return addMonthsUTC(firstDue, monthsDiff) === dayStartMs
+}
+
+function getNextRecurringDueOnOrAfter(
+  task: TaskForDue & { frequency: Frequency },
+  rangeStartMs: number,
+  refNowMs: number,
+): number {
+  const firstDue = getFirstDueMs(task, refNowMs)
+  if (rangeStartMs <= firstDue) return firstDue
+  if (task.frequency in DAY_INTERVALS) {
+    const intervalDays =
+      DAY_INTERVALS[task.frequency as keyof typeof DAY_INTERVALS]
+    const intervalMs = intervalDays * MS_PER_DAY
+    const steps = Math.ceil((rangeStartMs - firstDue) / intervalMs)
+    return firstDue + steps * intervalMs
+  }
+  const intervalMonths =
+    MONTH_INTERVALS[task.frequency as keyof typeof MONTH_INTERVALS]
+  const first = new Date(firstDue)
+  const start = new Date(rangeStartMs)
+  const monthsDiff =
+    (start.getUTCFullYear() - first.getUTCFullYear()) * 12 +
+    (start.getUTCMonth() - first.getUTCMonth())
+  const alignedSteps = Math.floor(monthsDiff / intervalMonths) * intervalMonths
+  let candidate = addMonthsUTC(firstDue, alignedSteps)
+  if (candidate < rangeStartMs) {
+    candidate = addMonthsUTC(candidate, intervalMonths)
+  }
+  return candidate
+}
+
 /** Whether a task is due on the given day (UTC). Non-recurring: due on day D iff (!dueDate || dueDate === dayStartMs) and !completed. Recurring: first due = dueDate ?? refTodayStart; due on D if D >= firstDue or next due <= end of D. */
 export function isTaskDueOnDay(
   task: TaskForDue,
   dayStartMs: number,
   refNowMs?: number,
-  latestCompletedDate?: number,
 ): boolean {
   const refNow = refNowMs ?? Date.now()
-  const todayStart = startOfDayUTC(refNow)
   const isRecurring = task.frequency != null
-
-  const dayEndMs = dayStartMs + MS_PER_DAY - 1
 
   if (!isRecurring) {
     if (task.dueDate != null) return task.dueDate === dayStartMs
     return true
   }
 
-  if (
-    latestCompletedDate != null &&
-    latestCompletedDate >= dayStartMs &&
-    latestCompletedDate <= dayEndMs
-  ) {
-    return true
-  }
-
-  if (latestCompletedDate == null) {
-    const firstDue = task.dueDate ?? todayStart
-    return dayStartMs >= firstDue
-  }
-
-  const nextDue = nextDueAfter(latestCompletedDate, task.frequency!)
-  return nextDue <= dayEndMs
-}
-
-/** Next due date (start of day UTC ms) for a task. Recurring: next interval after lastCompleted; never completed = dueDate ?? today. Non-recurring: treated as today if incomplete. */
-function getNextDueMs(
-  task: TaskForDue,
-  nowMs: number,
-  latestCompletedDate?: number,
-): number {
-  const isRecurring = task.frequency != null
-  const todayStart = startOfDayUTC(nowMs)
-  if (!isRecurring) {
-    return todayStart
-  }
-  if (latestCompletedDate == null) {
-    return task.dueDate ?? todayStart
-  }
-  return nextDueAfter(latestCompletedDate, task.frequency!)
+  return isRecurringDueOnDay(
+    { ...task, frequency: task.frequency! },
+    dayStartMs,
+    refNow,
+  )
 }
 
 /** Whether a task is due within [rangeStartMs, rangeEndMs] (UTC, inclusive). */
@@ -444,7 +447,6 @@ function isTaskDueInRange(
   rangeStartMs: number,
   rangeEndMs: number,
   nowMs: number,
-  latestCompletedDate?: number,
 ): boolean {
   const isRecurring = task.frequency != null
   if (!isRecurring) {
@@ -453,14 +455,11 @@ function isTaskDueInRange(
     }
     return true
   }
-  if (
-    latestCompletedDate != null &&
-    latestCompletedDate >= rangeStartMs &&
-    latestCompletedDate <= rangeEndMs
-  ) {
-    return true
-  }
-  const nextDue = getNextDueMs(task, nowMs, latestCompletedDate)
+  const nextDue = getNextRecurringDueOnOrAfter(
+    { ...task, frequency: task.frequency! },
+    rangeStartMs,
+    nowMs,
+  )
   return nextDue >= rangeStartMs && nextDue <= rangeEndMs
 }
 
@@ -516,7 +515,9 @@ export const listTaskAncestors = query({
 export const listTaskChildren = query({
   args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const dayStartMs = args.dayStartMs ?? startOfDayUTC(Date.now())
+    const dayStartMs = startOfDayUTC(
+      args.dayStartMs ?? startOfDayUTC(Date.now()),
+    )
     const parent = await ctx.db.get(args.taskId)
     const scopeNonRecurringToDay =
       isRecurringTask(parent) ||
@@ -589,7 +590,9 @@ async function getDirectChildCompletionForDay(
 export const getTaskCompletion = query({
   args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const dayStartMs = args.dayStartMs ?? startOfDayUTC(Date.now())
+    const dayStartMs = startOfDayUTC(
+      args.dayStartMs ?? startOfDayUTC(Date.now()),
+    )
     const rootTask = await ctx.db.get(args.taskId)
     const scopeNonRecurringToDay =
       isRecurringTask(rootTask) ||
@@ -666,31 +669,20 @@ export const listRootTasksDueOnDate = query({
   args: { dayStartMs: v.number() },
   handler: async (ctx, args) => {
     const now = Date.now()
-    const dayEndMs = args.dayStartMs + MS_PER_DAY - 1
+    const dayStartMs = startOfDayUTC(args.dayStartMs)
     const rootTasks = await ctx.db
       .query('tasks')
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
-    const withLatestCompletion = await Promise.all(
-      rootTasks.map(async (task) => ({
-        task,
-        latestCompletedDate: await getLatestCompletionDate(
-          ctx,
-          task._id,
-          dayEndMs,
-        ),
-      })),
+    const dueTasks = rootTasks.filter((task) =>
+      isTaskDueOnDay(task, dayStartMs, now),
     )
-    const dueTasks = withLatestCompletion
-      .filter(({ task, latestCompletedDate }) =>
-        isTaskDueOnDay(task, args.dayStartMs, now, latestCompletedDate),
-      )
     return await Promise.all(
-      dueTasks.map(async ({ task }) => {
+      dueTasks.map(async (task) => {
         const [isCompleted, subtaskCompletion] = await Promise.all([
-          isTaskCompletedWithChildrenForDay(ctx, task._id, args.dayStartMs),
-          getDirectChildCompletionForDay(ctx, task._id, args.dayStartMs),
+          isTaskCompletedWithChildrenForDay(ctx, task._id, dayStartMs),
+          getDirectChildCompletionForDay(ctx, task._id, dayStartMs),
         ])
         return {
           ...task,
@@ -713,24 +705,12 @@ export const listRootTasksDueByDay = query({
       .order('desc')
       .collect()
     return await Promise.all(
-      args.dayStartMs.map(async (dayStartMs) => {
-        const dayEndMs = dayStartMs + MS_PER_DAY - 1
-        const withLatestCompletion = await Promise.all(
-          rootTasks.map(async (task) => ({
-            task,
-            latestCompletedDate: await getLatestCompletionDate(
-              ctx,
-              task._id,
-              dayEndMs,
-            ),
-          })),
-        )
+      args.dayStartMs.map(async (rawDayStartMs) => {
+        const dayStartMs = startOfDayUTC(rawDayStartMs)
         const tasks = await Promise.all(
-          withLatestCompletion
-            .filter(({ task, latestCompletedDate }) =>
-              isTaskDueOnDay(task, dayStartMs, now, latestCompletedDate),
-            )
-            .map(async ({ task }) => ({
+          rootTasks
+            .filter((task) => isTaskDueOnDay(task, dayStartMs, now))
+            .map(async (task) => ({
               ...task,
               isCompleted: await isTaskCompletedWithChildrenForDay(
                 ctx,
@@ -756,18 +736,11 @@ export const listRootTasksDueInWeek = query({
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
-    const withLatestCompletion = await Promise.all(
-      rootTasks.map(async (task) => ({
-        task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id, end),
-      })),
+    const dueTasks = rootTasks.filter((task) =>
+      isTaskDueInRange(task, start, end, now),
     )
-    const dueTasks = withLatestCompletion
-      .filter(({ task, latestCompletedDate }) =>
-        isTaskDueInRange(task, start, end, now, latestCompletedDate),
-      )
     return await Promise.all(
-      dueTasks.map(async ({ task }) => ({
+      dueTasks.map(async (task) => ({
         ...task,
         isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
       })),
@@ -786,18 +759,11 @@ export const listRootTasksDueInMonth = query({
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
-    const withLatestCompletion = await Promise.all(
-      rootTasks.map(async (task) => ({
-        task,
-        latestCompletedDate: await getLatestCompletionDate(ctx, task._id, end),
-      })),
+    const dueTasks = rootTasks.filter((task) =>
+      isTaskDueInRange(task, start, end, now),
     )
-    const dueTasks = withLatestCompletion
-      .filter(({ task, latestCompletedDate }) =>
-        isTaskDueInRange(task, start, end, now, latestCompletedDate),
-      )
     return await Promise.all(
-      dueTasks.map(async ({ task }) => ({
+      dueTasks.map(async (task) => ({
         ...task,
         isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
       })),
@@ -816,10 +782,12 @@ export const createTask = mutation({
     if (args.parentTaskId && args.frequency != null) {
       throw new Error('Sub-tasks cannot be recurring.')
     }
+    const normalizedDueDate =
+      args.dueDate != null ? startOfDayUTC(args.dueDate) : undefined
     return await ctx.db.insert('tasks', {
       title: args.title,
       parentTaskId: args.parentTaskId,
-      dueDate: args.dueDate,
+      dueDate: normalizedDueDate,
       frequency: args.frequency,
     })
   },
@@ -854,7 +822,10 @@ export const updateTask = mutation({
       | 'yearly'
     } = {}
     if (args.title !== undefined) patch.title = args.title
-    if (args.dueDate !== undefined) patch.dueDate = args.dueDate
+    if (args.dueDate !== undefined) {
+      patch.dueDate =
+        args.dueDate != null ? startOfDayUTC(args.dueDate) : undefined
+    }
     if (args.frequency !== undefined) patch.frequency = args.frequency
     return await ctx.db.patch(args.id, patch)
   },
