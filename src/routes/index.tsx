@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { CreationDrawer } from '../components/CreationDrawer'
 import { MonthGrid } from '../components/MonthGrid'
+import { SortableTaskList } from '../components/SortableTaskList'
 import { TaskRow } from '../components/TaskRow'
 import { WeekStrip } from '../components/WeekStrip'
 import {
@@ -21,6 +22,8 @@ import { ListRowSkeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
+import { buildRootDayViewKey } from '../lib/taskOrder'
+import { useReorderTasks } from '../lib/useReorderTasks'
 
 export const Route = createFileRoute('/')({
   ssr: false,
@@ -58,10 +61,13 @@ function DailyView() {
   const updateTask = useMutation(api.todos.updateTask)
   const deleteTask = useMutation(api.todos.deleteTask)
   const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
+  const viewKey = buildRootDayViewKey(dayStartMs)
   const rootTasksDueOnDate = useQuery(api.todos.listRootTasksDueOnDate, {
     dayStartMs,
+    viewKey,
   })
   const rootTasks = rootTasksDueOnDate ?? []
+  const reorderTasks = useReorderTasks()
   const todayStartMs = startOfDayUTCFromDate(new Date())
   const isSelectedToday = dayStartMs === todayStartMs
 
@@ -168,6 +174,10 @@ function DailyView() {
         error instanceof Error ? error.message : 'Failed to update task.',
       )
     }
+  }
+
+  const handleReorder = (orderedIds: Array<Id<'tasks'>>) => {
+    void reorderTasks({ viewKey, taskIds: orderedIds })
   }
 
   const handleSelectDay = (d: Date) => {
@@ -348,8 +358,11 @@ function DailyView() {
                 </div>
               </div>
             ) : (
-              <ul className="space-y-6">
-                {rootTasks.map((task) => {
+              <SortableTaskList
+                tasks={rootTasks}
+                onReorder={handleReorder}
+                isDragDisabled={(task) => editingTaskId === task._id}
+                renderTask={(task, dragProps) => {
                   const draftTitle = draftTaskTitles[task._id] ?? ''
                   const isCompleted =
                     taskCompletionOverrides[task._id] ?? task.isCompleted
@@ -374,10 +387,16 @@ function DailyView() {
                       handleDelete={handleTaskDelete}
                       handleComplete={handleTaskToggle}
                       dateSearch={dateStr}
+                      containerRef={dragProps.containerRef}
+                      containerProps={dragProps.containerProps}
+                      containerStyle={dragProps.containerStyle}
+                      isDragging={dragProps.isDragging}
+                      dragHandleRef={dragProps.dragHandleRef}
+                      dragHandleProps={dragProps.dragHandleProps}
                     />
                   )
-                })}
-              </ul>
+                }}
+              />
             )}
           </div>
         </section>

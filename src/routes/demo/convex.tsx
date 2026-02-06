@@ -12,7 +12,7 @@ export const Route = createFileRoute('/demo/convex')({
 })
 
 function ConvexTodos() {
-  const tasks = useQuery(api.todos.listTasks)
+  const tasks = useQuery(api.todos.listTasks, {})
   const addTask = useMutation(api.todos.createTask)
   const deleteTask = useMutation(api.todos.deleteTask)
 
@@ -75,7 +75,7 @@ function ConvexTodos() {
             <button
               onClick={handleAddTask}
               disabled={!newTask.trim()}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+              className="bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
             >
               <Plus size={20} />
               Add
@@ -118,7 +118,7 @@ function ConvexTodos() {
 
                   <button
                     onClick={() => handleRemoveTask(task._id)}
-                    className="flex-shrink-0 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="shrink-0 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={18} />
                   </button>

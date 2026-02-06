@@ -17,7 +17,7 @@ export default function Header() {
           <Menu size={24} />
         </button>
         <h1 className="ml-4 text-xl font-semibold">
-          <Link to="/" search={{ view: 'day' }}>
+          <Link to="/">
             <img
               src="/tanstack-word-logo-white.svg"
               alt="TanStack Logo"
@@ -44,10 +44,7 @@ export default function Header() {
         </div>
 
         <nav className="flex-1 p-4 overflow-y-auto" aria-label="Main navigation">
-          <Link
-            to="/"
-            search={{ view: 'day' }}
-            onClick={() => setIsOpen(false)}
+          <Link to="/" onClick={() => setIsOpen(false)}
             className="mb-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-accent/40"
             activeProps={{
               className:

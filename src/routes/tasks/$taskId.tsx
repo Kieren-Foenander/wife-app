@@ -5,6 +5,7 @@ import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { CreationDrawer } from '../../components/CreationDrawer'
+import { SortableTaskList } from '../../components/SortableTaskList'
 import { TaskRow } from '../../components/TaskRow'
 import { Button } from '../../components/ui/button'
 import { ListRowSkeleton } from '../../components/ui/skeleton'
@@ -12,6 +13,8 @@ import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
 import { TaskCompletionIndicator } from '../../components/TaskCompletionIndicator'
 import { startOfDayUTCFromDate } from '../../lib/dateUtils'
+import { buildTaskChildrenViewKey } from '../../lib/taskOrder'
+import { useReorderTasks } from '../../lib/useReorderTasks'
 import type { Id } from '../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/tasks/$taskId')({
@@ -39,9 +42,11 @@ function TaskDetail() {
   const ancestors = useQuery(api.todos.listTaskAncestors, {
     taskId: taskId as Id<'tasks'>,
   })
+  const viewKey = buildTaskChildrenViewKey(taskId, dayStartMs)
   const children = useQuery(api.todos.listTaskChildren, {
     taskId: taskId as Id<'tasks'>,
     dayStartMs,
+    viewKey,
   })
   const completion = useQuery(api.todos.getTaskCompletion, {
     taskId: taskId as Id<'tasks'>,
@@ -60,6 +65,7 @@ function TaskDetail() {
   const updateTask = useMutation(api.todos.updateTask)
   const deleteTask = useMutation(api.todos.deleteTask)
   const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
+  const reorderTasks = useReorderTasks()
 
   const effectiveCompletion = (() => {
     if (!completion) return undefined
@@ -222,6 +228,14 @@ function TaskDetail() {
     } finally {
       setIsCompletingAll(false)
     }
+  }
+
+  const handleReorder = (orderedIds: Array<Id<'tasks'>>) => {
+    void reorderTasks({
+      viewKey,
+      taskIds: orderedIds,
+      parentTaskId: taskId as Id<'tasks'>,
+    })
   }
 
   const isFullyComplete = effectiveCompletion
@@ -422,8 +436,11 @@ function TaskDetail() {
                 </div>
               </div>
             ) : (
-              <ul className="space-y-6">
-                {children.tasks.map((child) => {
+              <SortableTaskList
+                tasks={children.tasks}
+                onReorder={handleReorder}
+                isDragDisabled={(task) => editingTaskId === task._id}
+                renderTask={(child, dragProps) => {
                   const isCompleted =
                     taskCompletionOverrides[child._id] ?? child.isCompleted
                   return (
@@ -447,10 +464,16 @@ function TaskDetail() {
                       handleDelete={handleDeleteTask}
                       handleComplete={handleCompleteTask}
                       dateSearch={dateStr}
+                      containerRef={dragProps.containerRef}
+                      containerProps={dragProps.containerProps}
+                      containerStyle={dragProps.containerStyle}
+                      isDragging={dragProps.isDragging}
+                      dragHandleRef={dragProps.dragHandleRef}
+                      dragHandleProps={dragProps.dragHandleProps}
                     />
                   )
-                })}
-              </ul>
+                }}
+              />
             )}
           </div>
         </section>
