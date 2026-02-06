@@ -38,6 +38,22 @@ export type AddTaskParams = {
   frequency?: TaskFrequency
 }
 
+export type UpdateTaskParams = {
+  id: Id<'tasks'>
+  title: string
+  dueDate?: number | null
+  frequency?: TaskFrequency | null
+}
+
+export type EditTaskData = {
+  id: Id<'tasks'>
+  title: string
+  dueDate?: number
+  frequency?: TaskFrequency
+  parentTaskId?: Id<'tasks'> | null
+  parentTaskTitle?: string
+}
+
 /** Format Date as YYYY-MM-DD for input[type="date"]. */
 function toDateInputValue(d: Date): string {
   const y = d.getUTCFullYear()
@@ -60,6 +76,8 @@ type CreationDrawerProps = {
   /** Read-only parent name shown when parentTaskId provided. */
   parentTaskTitle?: string
   onAddTask: (params: AddTaskParams) => Promise<void>
+  onUpdateTask?: (params: UpdateTaskParams) => Promise<void>
+  taskToEdit?: EditTaskData | null
   /** Title shown in drawer header. */
   title?: string
   /** Default due date for new tasks (e.g. selected day on index). */
@@ -72,6 +90,8 @@ export function CreationDrawer({
   parentTaskId,
   parentTaskTitle,
   onAddTask,
+  onUpdateTask,
+  taskToEdit,
   title = 'Create task',
   defaultDueDate,
 }: CreationDrawerProps) {
@@ -79,27 +99,59 @@ export function CreationDrawer({
   const [taskDueDate, setTaskDueDate] = useState<string>('')
   const [repeatEnabled, setRepeatEnabled] = useState(false)
   const [taskFrequency, setTaskFrequency] = useState<TaskFrequency | ''>('daily')
-  const showParentInfo = parentTaskId != null
+  const effectiveParentTaskId = taskToEdit?.parentTaskId ?? parentTaskId
+  const effectiveParentTaskTitle = taskToEdit?.parentTaskTitle ?? parentTaskTitle
+  const isEditing = taskToEdit != null
+  const showParentInfo = effectiveParentTaskId != null
   const allowRepeat = !showParentInfo
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    if (isEditing && taskToEdit) {
+      setTaskTitle(taskToEdit.title)
       setTaskDueDate(
-        toDateInputValue(defaultDueDate ?? new Date()),
+        taskToEdit.dueDate != null
+          ? toDateInputValue(new Date(taskToEdit.dueDate))
+          : '',
       )
+      if (allowRepeat) {
+        setRepeatEnabled(taskToEdit.frequency != null)
+        setTaskFrequency(taskToEdit.frequency ?? 'daily')
+      } else {
+        setRepeatEnabled(false)
+        setTaskFrequency('daily')
+      }
+      return
     }
-    if (showParentInfo) {
-      setRepeatEnabled(false)
-    }
-  }, [open, parentTaskId, defaultDueDate])
+    setTaskTitle('')
+    setTaskDueDate(
+      defaultDueDate ? toDateInputValue(defaultDueDate) : '',
+    )
+    setRepeatEnabled(false)
+    setTaskFrequency('daily')
+  }, [open, isEditing, taskToEdit, defaultDueDate, allowRepeat])
 
   const handleTaskSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const trimmed = taskTitle.trim()
     if (!trimmed) return
+    if (isEditing && taskToEdit) {
+      if (!onUpdateTask) return
+      await onUpdateTask({
+        id: taskToEdit.id,
+        title: trimmed,
+        dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : null,
+        frequency: allowRepeat
+          ? repeatEnabled && taskFrequency
+            ? taskFrequency
+            : null
+          : undefined,
+      })
+      return
+    }
     await onAddTask({
       title: trimmed,
-      parentTaskId: showParentInfo ? parentTaskId : undefined,
+      parentTaskId: showParentInfo ? effectiveParentTaskId : undefined,
       dueDate: taskDueDate ? parseDateToUTCStartMs(taskDueDate) : undefined,
       frequency:
         allowRepeat && repeatEnabled && taskFrequency ? taskFrequency : undefined,
@@ -146,7 +198,7 @@ export function CreationDrawer({
                 <input
                   id="task-parent"
                   type="text"
-                  value={parentTaskTitle ?? 'Selected task'}
+                  value={effectiveParentTaskTitle ?? 'Selected task'}
                   readOnly
                   disabled
                   className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground opacity-80"
@@ -220,7 +272,7 @@ export function CreationDrawer({
               className="h-10 w-full px-6 sm:w-auto"
               disabled={!taskTitle.trim()}
             >
-              Add task
+              {isEditing ? 'Save changes' : 'Add task'}
             </Button>
           </form>
         </div>

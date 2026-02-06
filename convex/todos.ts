@@ -900,8 +900,8 @@ export const updateTask = mutation({
   args: {
     id: v.id('tasks'),
     title: v.optional(v.string()),
-    dueDate: v.optional(v.number()),
-    frequency: v.optional(frequencyValidator),
+    dueDate: v.optional(v.union(v.number(), v.null())),
+    frequency: v.optional(v.union(frequencyValidator, v.null())),
   },
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.id)
@@ -929,7 +929,9 @@ export const updateTask = mutation({
       patch.dueDate =
         args.dueDate != null ? startOfDayUTC(args.dueDate) : undefined
     }
-    if (args.frequency !== undefined) patch.frequency = args.frequency
+    if (args.frequency !== undefined) {
+      patch.frequency = args.frequency ?? undefined
+    }
     return await ctx.db.patch(args.id, patch)
   },
 })

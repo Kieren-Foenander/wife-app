@@ -4,7 +4,12 @@ import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { CreationDrawer } from '../components/CreationDrawer'
+import {
+  CreationDrawer,
+  type EditTaskData,
+  type TaskFrequency,
+  type UpdateTaskParams,
+} from '../components/CreationDrawer'
 import { MonthGrid } from '../components/MonthGrid'
 import { SortableTaskList } from '../components/SortableTaskList'
 import { TaskRow } from '../components/TaskRow'
@@ -48,10 +53,7 @@ function DailyView() {
   const dayStartMs = startOfDayUTCFromDate(selectedDate)
   const [rangeMode, setRangeMode] = useState<'week' | 'month'>('week')
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
-  const [draftTaskTitles, setDraftTaskTitles] = useState<Record<string, string>>(
-    {},
-  )
+  const [editingTask, setEditingTask] = useState<EditTaskData | null>(null)
   const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
     Partial<Record<string, boolean>>
   >({})
@@ -97,6 +99,7 @@ function DailyView() {
         frequency: params.frequency,
       })
       setDrawerOpen(false)
+      setEditingTask(null)
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to create task.',
@@ -104,38 +107,19 @@ function DailyView() {
     }
   }
 
-  const startTaskEditing = (id: Id<'tasks'>, currentTitle: string) => {
-    setEditingTaskId(id)
-    setDraftTaskTitles((prev) => ({
-      ...prev,
-      [id]: currentTitle,
-    }))
-  }
-
-  const cancelTaskEditing = (id: Id<'tasks'>) => {
-    setEditingTaskId((current) => (current === id ? null : current))
-    setDraftTaskTitles((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-  }
-
-  const saveTaskEditing = async (
-    id: Id<'tasks'>,
-    currentTitle: string,
-  ) => {
-    const trimmed = (draftTaskTitles[id] ?? '').trim()
-    if (!trimmed || trimmed === currentTitle) {
-      cancelTaskEditing(id)
-      return
-    }
+  const handleUpdateTask = async (params: UpdateTaskParams) => {
     try {
-      await updateTask({ id, title: trimmed })
-      cancelTaskEditing(id)
+      await updateTask({
+        id: params.id,
+        title: params.title,
+        dueDate: params.dueDate,
+        frequency: params.frequency,
+      })
+      setDrawerOpen(false)
+      setEditingTask(null)
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to rename task.',
+        error instanceof Error ? error.message : 'Failed to update task.',
       )
     }
   }
@@ -174,6 +158,23 @@ function DailyView() {
         error instanceof Error ? error.message : 'Failed to update task.',
       )
     }
+  }
+
+  const handleEditTask = (task: {
+    _id: Id<'tasks'>
+    title: string
+    dueDate?: number
+    frequency?: TaskFrequency
+    parentTaskId?: Id<'tasks'>
+  }) => {
+    setEditingTask({
+      id: task._id,
+      title: task.title,
+      dueDate: task.dueDate,
+      frequency: task.frequency,
+      parentTaskId: task.parentTaskId ?? null,
+    })
+    setDrawerOpen(true)
   }
 
   const handleReorder = (orderedIds: Array<Id<'tasks'>>) => {
@@ -315,16 +316,24 @@ function DailyView() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <Button
             className="w-full sm:w-auto"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => {
+              setEditingTask(null)
+              setDrawerOpen(true)
+            }}
             aria-label="Open create drawer to add task"
           >
             Add task
           </Button>
           <CreationDrawer
             open={drawerOpen}
-            onOpenChange={setDrawerOpen}
+            onOpenChange={(open) => {
+              setDrawerOpen(open)
+              if (!open) setEditingTask(null)
+            }}
             onAddTask={handleAddTask}
-            title="Add task"
+            onUpdateTask={handleUpdateTask}
+            taskToEdit={editingTask}
+            title={editingTask ? 'Edit task' : 'Add task'}
             defaultDueDate={selectedDate}
           />
         </div>
@@ -361,29 +370,17 @@ function DailyView() {
               <SortableTaskList
                 tasks={rootTasks}
                 onReorder={handleReorder}
-                isDragDisabled={(task) => editingTaskId === task._id}
                 renderTask={(task, dragProps) => {
-                  const draftTitle = draftTaskTitles[task._id] ?? ''
                   const isCompleted =
                     taskCompletionOverrides[task._id] ?? task.isCompleted
                   return (
                     <TaskRow
                       key={task._id}
                       task={task}
-                      editingTaskId={editingTaskId}
-                      draftTitle={draftTitle}
-                      setDraftTitle={(value) =>
-                        setDraftTaskTitles((prev) => ({
-                          ...prev,
-                          [task._id]: value,
-                        }))
-                      }
                       isCompleted={isCompleted}
                       subtaskCompletion={task.subtaskCompletion}
                       celebratingTaskId={celebratingTaskId}
-                      startEditing={startTaskEditing}
-                      saveEditing={saveTaskEditing}
-                      cancelEditing={cancelTaskEditing}
+                      onEdit={handleEditTask}
                       handleDelete={handleTaskDelete}
                       handleComplete={handleTaskToggle}
                       dateSearch={dateStr}
