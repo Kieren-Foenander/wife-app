@@ -16,6 +16,26 @@ type Frequency =
   | 'yearly'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
+const ROOT_DAY_PREFIX = 'root-day:'
+const ROOT_RECURRING_VIEW_KEY = 'root-recurring'
+const CHILDREN_PREFIX = 'children:'
+const CHILDREN_RECURRING_PREFIX = 'children-recurring:'
+
+function isRootDayViewKey(viewKey: string): boolean {
+  return viewKey.startsWith(ROOT_DAY_PREFIX)
+}
+
+function parseChildrenViewKey(viewKey: string): string | null {
+  if (!viewKey.startsWith(CHILDREN_PREFIX)) return null
+  const rest = viewKey.slice(CHILDREN_PREFIX.length)
+  const lastColon = rest.lastIndexOf(':')
+  if (lastColon <= 0) return null
+  return rest.slice(0, lastColon)
+}
+
+function buildChildrenRecurringViewKey(parentTaskId: string): string {
+  return `${CHILDREN_RECURRING_PREFIX}${parentTaskId}`
+}
 
 async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
   ctx: QueryCtx,
@@ -27,14 +47,62 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
     .query('taskOrders')
     .withIndex('byViewKeyOrder', (q) => q.eq('viewKey', viewKey))
     .collect()
-  if (orderRows.length === 0) return tasks
   const orderById = new Map<Id<'tasks'>, number>(
     orderRows.map((row) => [row.taskId, row.order]),
   )
+  const isRootDay = isRootDayViewKey(viewKey)
+  const recurringOrderById = new Map<Id<'tasks'>, number>()
+  let sharedOrderAppliesToAll = false
+  const hasRecurringTasks = isRootDay && tasks.some((task) => isRecurringTask(task))
+  if (hasRecurringTasks) {
+    const recurringRows = await ctx.db
+      .query('taskOrders')
+      .withIndex('byViewKeyOrder', (q) =>
+        q.eq('viewKey', ROOT_RECURRING_VIEW_KEY),
+      )
+      .collect()
+    for (const row of recurringRows) {
+      recurringOrderById.set(row.taskId, row.order)
+    }
+  }
+  if (!isRootDay) {
+    const parentId = parseChildrenViewKey(viewKey)
+    if (parentId) {
+      const parent = await ctx.db.get(parentId as Id<'tasks'>)
+      const hasRecurringParent =
+        isRecurringTask(parent) || (await hasRecurringAncestor(ctx, parentId as Id<'tasks'>))
+      if (hasRecurringParent) {
+        const recurringRows = await ctx.db
+          .query('taskOrders')
+          .withIndex('byViewKeyOrder', (q) =>
+            q.eq('viewKey', buildChildrenRecurringViewKey(parentId)),
+          )
+          .collect()
+        for (const row of recurringRows) {
+          recurringOrderById.set(row.taskId, row.order)
+        }
+        if (recurringOrderById.size > 0) {
+          sharedOrderAppliesToAll = true
+        }
+      }
+    }
+  }
+  if (orderRows.length === 0 && recurringOrderById.size === 0) return tasks
   const originalIndex = new Map<Id<'tasks'>, number>(
     tasks.map((task, index) => [task._id, index]),
   )
   return [...tasks].sort((a, b) => {
+    const aRecurring = recurringOrderById.get(a._id)
+    const bRecurring = recurringOrderById.get(b._id)
+    if (sharedOrderAppliesToAll) {
+      if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
+      if (aRecurring != null) return -1
+      if (bRecurring != null) return 1
+    } else if (recurringOrderById.size > 0 && isRecurringTask(a) && isRecurringTask(b)) {
+      if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
+      if (aRecurring != null) return -1
+      if (bRecurring != null) return 1
+    }
     const aOrder = orderById.get(a._id)
     const bOrder = orderById.get(b._id)
     if (aOrder != null && bOrder != null) return aOrder - bOrder
@@ -830,6 +898,45 @@ export const listRootTasksDueInMonth = query({
   },
 })
 
+async function upsertTaskOrder(
+  ctx: MutationCtx,
+  viewKey: string,
+  taskIds: Array<Id<'tasks'>>,
+  parentTaskId?: Id<'tasks'>,
+  pruneMissing = true,
+): Promise<void> {
+  const existing = await ctx.db
+    .query('taskOrders')
+    .withIndex('byViewKeyOrder', (q) => q.eq('viewKey', viewKey))
+    .collect()
+  const existingByTaskId = new Map(existing.map((row) => [row.taskId, row]))
+  if (pruneMissing) {
+    const desired = new Set(taskIds)
+    for (const row of existing) {
+      if (!desired.has(row.taskId)) {
+        await ctx.db.delete(row._id)
+      }
+    }
+  }
+  for (let index = 0; index < taskIds.length; index += 1) {
+    const taskId = taskIds[index]
+    const existingRow = existingByTaskId.get(taskId)
+    if (existingRow) {
+      await ctx.db.patch(existingRow._id, {
+        order: index,
+        parentTaskId,
+      })
+    } else {
+      await ctx.db.insert('taskOrders', {
+        viewKey,
+        taskId,
+        parentTaskId,
+        order: index,
+      })
+    }
+  }
+}
+
 export const reorderTasks = mutation({
   args: {
     viewKey: v.string(),
@@ -841,33 +948,46 @@ export const reorderTasks = mutation({
     if (uniqueIds.size !== args.taskIds.length) {
       throw new Error('Duplicate task ids in reorder request.')
     }
-    const existing = await ctx.db
-      .query('taskOrders')
-      .withIndex('byViewKeyOrder', (q) => q.eq('viewKey', args.viewKey))
-      .collect()
-    const existingByTaskId = new Map(
-      existing.map((row) => [row.taskId, row]),
+    await upsertTaskOrder(
+      ctx,
+      args.viewKey,
+      args.taskIds,
+      args.parentTaskId,
+      true,
     )
-    for (const row of existing) {
-      if (!uniqueIds.has(row.taskId)) {
-        await ctx.db.delete(row._id)
+    if (isRootDayViewKey(args.viewKey)) {
+      const recurringIds: Array<Id<'tasks'>> = []
+      for (const taskId of args.taskIds) {
+        const task = await ctx.db.get(taskId)
+        if (isRecurringTask(task)) {
+          recurringIds.push(taskId)
+        }
+      }
+      if (recurringIds.length > 0) {
+        await upsertTaskOrder(
+          ctx,
+          ROOT_RECURRING_VIEW_KEY,
+          recurringIds,
+          undefined,
+          false,
+        )
       }
     }
-    for (let index = 0; index < args.taskIds.length; index += 1) {
-      const taskId = args.taskIds[index]
-      const existingRow = existingByTaskId.get(taskId)
-      if (existingRow) {
-        await ctx.db.patch(existingRow._id, {
-          order: index,
-          parentTaskId: args.parentTaskId,
-        })
-      } else {
-        await ctx.db.insert('taskOrders', {
-          viewKey: args.viewKey,
-          taskId,
-          parentTaskId: args.parentTaskId,
-          order: index,
-        })
+    const parentIdFromView = parseChildrenViewKey(args.viewKey)
+    const parentTaskId = args.parentTaskId ?? (parentIdFromView as Id<'tasks'> | undefined)
+    if (parentTaskId) {
+      const parent = await ctx.db.get(parentTaskId)
+      const hasRecurringParent =
+        isRecurringTask(parent) ||
+        (await hasRecurringAncestor(ctx, parentTaskId))
+      if (hasRecurringParent) {
+        await upsertTaskOrder(
+          ctx,
+          buildChildrenRecurringViewKey(parentTaskId),
+          args.taskIds,
+          parentTaskId,
+          true,
+        )
       }
     }
     return { updated: args.taskIds.length }
