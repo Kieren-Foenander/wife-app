@@ -4,7 +4,13 @@ import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { CreationDrawer } from '../../components/CreationDrawer'
+import {
+  CreationDrawer,
+  type EditTaskData,
+  type TaskFrequency,
+  type UpdateTaskParams,
+} from '../../components/CreationDrawer'
+import { SortableTaskList } from '../../components/SortableTaskList'
 import { TaskRow } from '../../components/TaskRow'
 import { Button } from '../../components/ui/button'
 import { ListRowSkeleton } from '../../components/ui/skeleton'
@@ -12,6 +18,8 @@ import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
 import { TaskCompletionIndicator } from '../../components/TaskCompletionIndicator'
 import { startOfDayUTCFromDate } from '../../lib/dateUtils'
+import { buildTaskChildrenViewKey } from '../../lib/taskOrder'
+import { useReorderTasks } from '../../lib/useReorderTasks'
 import type { Id } from '../../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/tasks/$taskId')({
@@ -39,17 +47,18 @@ function TaskDetail() {
   const ancestors = useQuery(api.todos.listTaskAncestors, {
     taskId: taskId as Id<'tasks'>,
   })
+  const viewKey = buildTaskChildrenViewKey(taskId, dayStartMs)
   const children = useQuery(api.todos.listTaskChildren, {
     taskId: taskId as Id<'tasks'>,
     dayStartMs,
+    viewKey,
   })
   const completion = useQuery(api.todos.getTaskCompletion, {
     taskId: taskId as Id<'tasks'>,
     dayStartMs,
   })
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingTaskId, setEditingTaskId] = useState<Id<'tasks'> | null>(null)
-  const [draftTitles, setDraftTitles] = useState<Record<string, string>>({})
+  const [editingTask, setEditingTask] = useState<EditTaskData | null>(null)
   const [taskCompletionOverrides, setTaskCompletionOverrides] = useState<
     Partial<Record<string, boolean>>
   >({})
@@ -60,6 +69,7 @@ function TaskDetail() {
   const updateTask = useMutation(api.todos.updateTask)
   const deleteTask = useMutation(api.todos.deleteTask)
   const setTaskCompletion = useMutation(api.todos.setTaskCompletion)
+  const reorderTasks = useReorderTasks()
 
   const effectiveCompletion = (() => {
     if (!completion) return undefined
@@ -106,6 +116,7 @@ function TaskDetail() {
         frequency: params.frequency,
       })
       setDrawerOpen(false)
+      setEditingTask(null)
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to create task.',
@@ -113,32 +124,16 @@ function TaskDetail() {
     }
   }
 
-  const startTaskEditing = (id: Id<'tasks'>, currentTitle: string) => {
-    setEditingTaskId(id)
-    setDraftTitles((prev) => ({
-      ...prev,
-      [id]: currentTitle,
-    }))
-  }
-
-  const cancelTaskEditing = (id: Id<'tasks'>) => {
-    setEditingTaskId((current) => (current === id ? null : current))
-    setDraftTitles((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-  }
-
-  const saveTaskEditing = async (id: Id<'tasks'>, currentTitle: string) => {
-    const trimmed = (draftTitles[id] ?? '').trim()
-    if (!trimmed || trimmed === currentTitle) {
-      cancelTaskEditing(id)
-      return
-    }
+  const handleUpdateTask = async (params: UpdateTaskParams) => {
     try {
-      await updateTask({ id, title: trimmed })
-      cancelTaskEditing(id)
+      await updateTask({
+        id: params.id,
+        title: params.title,
+        dueDate: params.dueDate,
+        frequency: params.frequency,
+      })
+      setDrawerOpen(false)
+      setEditingTask(null)
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update task.',
@@ -198,6 +193,24 @@ function TaskDetail() {
     }
   }
 
+  const handleEditTask = (childTask: {
+    _id: Id<'tasks'>
+    title: string
+    dueDate?: number
+    frequency?: TaskFrequency
+    parentTaskId?: Id<'tasks'>
+  }) => {
+    setEditingTask({
+      id: childTask._id,
+      title: childTask.title,
+      dueDate: childTask.dueDate,
+      frequency: childTask.frequency,
+      parentTaskId: childTask.parentTaskId ?? null,
+      parentTaskTitle: task?.title,
+    })
+    setDrawerOpen(true)
+  }
+
   const handleCompleteAll = async () => {
     setIsCompletingAll(true)
     if (children) {
@@ -222,6 +235,14 @@ function TaskDetail() {
     } finally {
       setIsCompletingAll(false)
     }
+  }
+
+  const handleReorder = (orderedIds: Array<Id<'tasks'>>) => {
+    void reorderTasks({
+      viewKey,
+      taskIds: orderedIds,
+      parentTaskId: taskId as Id<'tasks'>,
+    })
   }
 
   const isFullyComplete = effectiveCompletion
@@ -361,18 +382,26 @@ function TaskDetail() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <Button
             className="w-full sm:w-auto"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => {
+              setEditingTask(null)
+              setDrawerOpen(true)
+            }}
             aria-label="Open drawer to add sub-task"
           >
             Add sub-task
           </Button>
           <CreationDrawer
             open={drawerOpen}
-            onOpenChange={setDrawerOpen}
+            onOpenChange={(open) => {
+              setDrawerOpen(open)
+              if (!open) setEditingTask(null)
+            }}
             onAddTask={handleAddTask}
+            onUpdateTask={handleUpdateTask}
+            taskToEdit={editingTask}
             parentTaskId={task?._id ?? (taskId as Id<'tasks'>)}
             parentTaskTitle={task?.title}
-            title="Add sub-task"
+            title={editingTask ? 'Edit task' : 'Add sub-task'}
             defaultDueDate={selectedDate}
           />
         </div>
@@ -422,35 +451,33 @@ function TaskDetail() {
                 </div>
               </div>
             ) : (
-              <ul className="space-y-6">
-                {children.tasks.map((child) => {
+              <SortableTaskList
+                tasks={children.tasks}
+                onReorder={handleReorder}
+                renderTask={(child, dragProps) => {
                   const isCompleted =
                     taskCompletionOverrides[child._id] ?? child.isCompleted
                   return (
                     <TaskRow
                       key={child._id}
                       task={child}
-                      editingTaskId={editingTaskId}
-                      draftTitle={draftTitles[child._id] ?? ''}
-                      setDraftTitle={(value) =>
-                        setDraftTitles((prev) => ({
-                          ...prev,
-                          [child._id]: value,
-                        }))
-                      }
                       isCompleted={isCompleted}
                       subtaskCompletion={child.subtaskCompletion}
                       celebratingTaskId={celebratingTaskId}
-                      startEditing={startTaskEditing}
-                      saveEditing={saveTaskEditing}
-                      cancelEditing={cancelTaskEditing}
+                      onEdit={handleEditTask}
                       handleDelete={handleDeleteTask}
                       handleComplete={handleCompleteTask}
                       dateSearch={dateStr}
+                      containerRef={dragProps.containerRef}
+                      containerProps={dragProps.containerProps}
+                      containerStyle={dragProps.containerStyle}
+                      isDragging={dragProps.isDragging}
+                      dragHandleRef={dragProps.dragHandleRef}
+                      dragHandleProps={dragProps.dragHandleProps}
                     />
                   )
-                })}
-              </ul>
+                }}
+              />
             )}
           </div>
         </section>

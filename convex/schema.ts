@@ -20,6 +20,14 @@ export default defineSchema({
     dueDate: v.optional(v.number()),
     frequency: v.optional(frequencyValidator),
   }).index('byParentTaskId', ['parentTaskId']),
+  taskOrders: defineTable({
+    viewKey: v.string(),
+    taskId: v.id('tasks'),
+    parentTaskId: v.optional(v.id('tasks')),
+    order: v.number(),
+  })
+    .index('byViewKeyOrder', ['viewKey', 'order'])
+    .index('byViewKeyTaskId', ['viewKey', 'taskId']),
   completedTasks: defineTable({
     taskId: v.id('tasks'),
     completedDate: v.optional(v.number()),

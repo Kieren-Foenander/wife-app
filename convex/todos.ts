@@ -17,6 +17,33 @@ type Frequency =
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 
+async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
+  ctx: QueryCtx,
+  viewKey: string | undefined,
+  tasks: T[],
+): Promise<T[]> {
+  if (!viewKey || tasks.length === 0) return tasks
+  const orderRows = await ctx.db
+    .query('taskOrders')
+    .withIndex('byViewKeyOrder', (q) => q.eq('viewKey', viewKey))
+    .collect()
+  if (orderRows.length === 0) return tasks
+  const orderById = new Map<Id<'tasks'>, number>(
+    orderRows.map((row) => [row.taskId, row.order]),
+  )
+  const originalIndex = new Map<Id<'tasks'>, number>(
+    tasks.map((task, index) => [task._id, index]),
+  )
+  return [...tasks].sort((a, b) => {
+    const aOrder = orderById.get(a._id)
+    const bOrder = orderById.get(b._id)
+    if (aOrder != null && bOrder != null) return aOrder - bOrder
+    if (aOrder != null) return -1
+    if (bOrder != null) return 1
+    return (originalIndex.get(a._id) ?? 0) - (originalIndex.get(b._id) ?? 0)
+  })
+}
+
 /** Start of day UTC (00:00:00.000) for a given timestamp. */
 function startOfDayUTC(ms: number): number {
   const d = new Date(ms)
@@ -484,9 +511,10 @@ function getCurrentMonthRangeUTC(nowMs: number): { start: number; end: number } 
 }
 
 export const listTasks = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query('tasks').order('desc').collect()
+  args: { viewKey: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const tasks = await ctx.db.query('tasks').order('desc').collect()
+    return await applyViewOrder(ctx, args.viewKey, tasks)
   },
 })
 
@@ -513,7 +541,11 @@ export const listTaskAncestors = query({
 })
 
 export const listTaskChildren = query({
-  args: { taskId: v.id('tasks'), dayStartMs: v.optional(v.number()) },
+  args: {
+    taskId: v.id('tasks'),
+    dayStartMs: v.optional(v.number()),
+    viewKey: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const dayStartMs = startOfDayUTC(
       args.dayStartMs ?? startOfDayUTC(Date.now()),
@@ -527,8 +559,9 @@ export const listTaskChildren = query({
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', args.taskId))
       .order('desc')
       .collect()
+    const orderedChildren = await applyViewOrder(ctx, args.viewKey, children)
     const tasks = await Promise.all(
-      children.map(async (task) => {
+      orderedChildren.map(async (task) => {
         const [isCompleted, subtaskCompletion] = await Promise.all([
           isTaskCompletedWithChildrenForDay(
             ctx,
@@ -654,19 +687,20 @@ export const listTasksForParentPicker = query({
 })
 
 export const listRootTasks = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
+  args: { viewKey: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const tasks = await ctx.db
       .query('tasks')
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
+    return await applyViewOrder(ctx, args.viewKey, tasks)
   },
 })
 
 /** Root tasks that are due on the given day (UTC). */
 export const listRootTasksDueOnDate = query({
-  args: { dayStartMs: v.number() },
+  args: { dayStartMs: v.number(), viewKey: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const now = Date.now()
     const dayStartMs = startOfDayUTC(args.dayStartMs)
@@ -678,8 +712,9 @@ export const listRootTasksDueOnDate = query({
     const dueTasks = rootTasks.filter((task) =>
       isTaskDueOnDay(task, dayStartMs, now),
     )
+    const orderedTasks = await applyViewOrder(ctx, args.viewKey, dueTasks)
     return await Promise.all(
-      dueTasks.map(async (task) => {
+      orderedTasks.map(async (task) => {
         const [isCompleted, subtaskCompletion] = await Promise.all([
           isTaskCompletedWithChildrenForDay(ctx, task._id, dayStartMs),
           getDirectChildCompletionForDay(ctx, task._id, dayStartMs),
@@ -696,7 +731,17 @@ export const listRootTasksDueOnDate = query({
 
 /** Root tasks due on each day (UTC) in the provided list. */
 export const listRootTasksDueByDay = query({
-  args: { dayStartMs: v.array(v.number()) },
+  args: {
+    dayStartMs: v.array(v.number()),
+    viewKeysByDay: v.optional(
+      v.array(
+        v.object({
+          dayStartMs: v.number(),
+          viewKey: v.string(),
+        }),
+      ),
+    ),
+  },
   handler: async (ctx, args) => {
     const now = Date.now()
     const rootTasks = await ctx.db
@@ -704,20 +749,32 @@ export const listRootTasksDueByDay = query({
       .withIndex('byParentTaskId', q => q.eq('parentTaskId', undefined))
       .order('desc')
       .collect()
+    const viewKeyByDay = new Map(
+      (args.viewKeysByDay ?? []).map((entry) => [
+        startOfDayUTC(entry.dayStartMs),
+        entry.viewKey,
+      ]),
+    )
     return await Promise.all(
       args.dayStartMs.map(async (rawDayStartMs) => {
         const dayStartMs = startOfDayUTC(rawDayStartMs)
+        const dueTasks = rootTasks.filter((task) =>
+          isTaskDueOnDay(task, dayStartMs, now),
+        )
+        const orderedTasks = await applyViewOrder(
+          ctx,
+          viewKeyByDay.get(dayStartMs),
+          dueTasks,
+        )
         const tasks = await Promise.all(
-          rootTasks
-            .filter((task) => isTaskDueOnDay(task, dayStartMs, now))
-            .map(async (task) => ({
-              ...task,
-              isCompleted: await isTaskCompletedWithChildrenForDay(
-                ctx,
-                task._id,
-                dayStartMs,
-              ),
-            })),
+          orderedTasks.map(async (task) => ({
+            ...task,
+            isCompleted: await isTaskCompletedWithChildrenForDay(
+              ctx,
+              task._id,
+              dayStartMs,
+            ),
+          })),
         )
         return { dayStartMs, tasks }
       }),
@@ -727,7 +784,7 @@ export const listRootTasksDueByDay = query({
 
 /** Root tasks due in the week (Sun–Sat UTC) containing refDateMs, or current week if omitted. */
 export const listRootTasksDueInWeek = query({
-  args: { refDateMs: v.optional(v.number()) },
+  args: { refDateMs: v.optional(v.number()), viewKey: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const now = args.refDateMs ?? Date.now()
     const { start, end } = getCurrentWeekRangeUTC(now)
@@ -739,8 +796,9 @@ export const listRootTasksDueInWeek = query({
     const dueTasks = rootTasks.filter((task) =>
       isTaskDueInRange(task, start, end, now),
     )
+    const orderedTasks = await applyViewOrder(ctx, args.viewKey, dueTasks)
     return await Promise.all(
-      dueTasks.map(async (task) => ({
+      orderedTasks.map(async (task) => ({
         ...task,
         isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
       })),
@@ -750,7 +808,7 @@ export const listRootTasksDueInWeek = query({
 
 /** Root tasks due in the month (UTC) containing refDateMs, or current month if omitted. */
 export const listRootTasksDueInMonth = query({
-  args: { refDateMs: v.optional(v.number()) },
+  args: { refDateMs: v.optional(v.number()), viewKey: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const now = args.refDateMs ?? Date.now()
     const { start, end } = getCurrentMonthRangeUTC(now)
@@ -762,12 +820,57 @@ export const listRootTasksDueInMonth = query({
     const dueTasks = rootTasks.filter((task) =>
       isTaskDueInRange(task, start, end, now),
     )
+    const orderedTasks = await applyViewOrder(ctx, args.viewKey, dueTasks)
     return await Promise.all(
-      dueTasks.map(async (task) => ({
+      orderedTasks.map(async (task) => ({
         ...task,
         isCompleted: await isTaskCompletedWithChildren(ctx, task._id),
       })),
     )
+  },
+})
+
+export const reorderTasks = mutation({
+  args: {
+    viewKey: v.string(),
+    taskIds: v.array(v.id('tasks')),
+    parentTaskId: v.optional(v.id('tasks')),
+  },
+  handler: async (ctx, args) => {
+    const uniqueIds = new Set(args.taskIds)
+    if (uniqueIds.size !== args.taskIds.length) {
+      throw new Error('Duplicate task ids in reorder request.')
+    }
+    const existing = await ctx.db
+      .query('taskOrders')
+      .withIndex('byViewKeyOrder', (q) => q.eq('viewKey', args.viewKey))
+      .collect()
+    const existingByTaskId = new Map(
+      existing.map((row) => [row.taskId, row]),
+    )
+    for (const row of existing) {
+      if (!uniqueIds.has(row.taskId)) {
+        await ctx.db.delete(row._id)
+      }
+    }
+    for (let index = 0; index < args.taskIds.length; index += 1) {
+      const taskId = args.taskIds[index]
+      const existingRow = existingByTaskId.get(taskId)
+      if (existingRow) {
+        await ctx.db.patch(existingRow._id, {
+          order: index,
+          parentTaskId: args.parentTaskId,
+        })
+      } else {
+        await ctx.db.insert('taskOrders', {
+          viewKey: args.viewKey,
+          taskId,
+          parentTaskId: args.parentTaskId,
+          order: index,
+        })
+      }
+    }
+    return { updated: args.taskIds.length }
   },
 })
 
@@ -797,8 +900,8 @@ export const updateTask = mutation({
   args: {
     id: v.id('tasks'),
     title: v.optional(v.string()),
-    dueDate: v.optional(v.number()),
-    frequency: v.optional(frequencyValidator),
+    dueDate: v.optional(v.union(v.number(), v.null())),
+    frequency: v.optional(v.union(frequencyValidator, v.null())),
   },
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.id)
@@ -826,7 +929,9 @@ export const updateTask = mutation({
       patch.dueDate =
         args.dueDate != null ? startOfDayUTC(args.dueDate) : undefined
     }
-    if (args.frequency !== undefined) patch.frequency = args.frequency
+    if (args.frequency !== undefined) {
+      patch.frequency = args.frequency ?? undefined
+    }
     return await ctx.db.patch(args.id, patch)
   },
 })
