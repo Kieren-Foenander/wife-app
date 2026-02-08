@@ -285,6 +285,8 @@ function CaloriesHome() {
   const [recipeSearch, setRecipeSearch] = useState('')
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null)
   const [gramsInput, setGramsInput] = useState('')
+  const [drawerMode, setDrawerMode] = useState<'list' | 'addNew'>('list')
+  const [addNewText, setAddNewText] = useState('')
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -311,11 +313,32 @@ function CaloriesHome() {
         year: 'numeric',
       })
   const entriesTitle = isSelectedToday ? "Today's entries" : 'Entries'
+  const isAddNew = drawerMode === 'addNew'
   const handleAddClick = () => {
     setDrawerOpen(true)
+    setDrawerMode('list')
   }
   const handleAddNew = () => {
-    toast('Add new flow coming soon.')
+    setSelectedRecipeId(null)
+    setDrawerMode('addNew')
+  }
+  const handleBackToList = () => {
+    setSelectedRecipeId(null)
+    setDrawerMode('list')
+  }
+  const handleRunRoughEstimate = () => {
+    if (!addNewText.trim()) {
+      toast('Add a short description first.')
+      return
+    }
+    toast('Rough estimate coming soon.')
+  }
+  const handleRunAccurateEstimate = () => {
+    if (!addNewText.trim()) {
+      toast('Add a short description first.')
+      return
+    }
+    toast('Accurate estimate coming soon.')
   }
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open)
@@ -323,6 +346,8 @@ function CaloriesHome() {
       setSelectedRecipeId(null)
       setRecipeSearch('')
       setGramsInput('')
+      setDrawerMode('list')
+      setAddNewText('')
     }
   }
 
@@ -346,6 +371,7 @@ function CaloriesHome() {
     : 0
   const canLog =
     !!selectedRecipe && grams > 0 && computedCalories > 0 && !Number.isNaN(grams)
+  const canRunAddNew = addNewText.trim().length > 0
   const handleLogRecipe = async () => {
     if (!selectedRecipe) return
     if (!canLog) {
@@ -560,18 +586,22 @@ function CaloriesHome() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <DrawerTitle className="text-foreground">
-                  {selectedRecipe ? 'Confirm entry' : 'Add entry'}
+                  {selectedRecipe
+                    ? 'Confirm entry'
+                    : isAddNew
+                      ? 'Add new'
+                      : 'Add entry'}
                 </DrawerTitle>
                 <p className="mt-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
                   Logging for {addContextLabel}
                 </p>
               </div>
-              {selectedRecipe ? (
+              {selectedRecipe || isAddNew ? (
                 <Button
                   type="button"
                   variant="ghost"
                   className="h-auto px-0 text-sm text-muted-foreground"
-                  onClick={() => setSelectedRecipeId(null)}
+                  onClick={handleBackToList}
                 >
                   Back to list
                 </Button>
@@ -632,6 +662,45 @@ function CaloriesHome() {
                     ) : null}
                   </div>
                 </details>
+              </div>
+            </div>
+          ) : isAddNew ? (
+            <div className="flex flex-col gap-4 px-4 pb-4">
+              <div className="rounded-2xl border border-border bg-card/70 p-4">
+                <label
+                  htmlFor="add-new-text"
+                  className="mb-2 block text-sm font-medium text-muted-foreground"
+                >
+                  Describe your meal
+                </label>
+                <textarea
+                  id="add-new-text"
+                  value={addNewText}
+                  onChange={(e) => setAddNewText(e.target.value)}
+                  placeholder="e.g. Chicken stir fry with rice"
+                  rows={4}
+                  className="min-h-[96px] w-full rounded-md border border-input bg-background/70 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  One line is enough to get started.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Button
+                  type="button"
+                  onClick={handleRunRoughEstimate}
+                  disabled={!canRunAddNew}
+                >
+                  Rough estimate (fast)
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleRunAccurateEstimate}
+                  disabled={!canRunAddNew}
+                >
+                  Accurate (add ingredients)
+                </Button>
               </div>
             </div>
           ) : (
@@ -698,7 +767,10 @@ function CaloriesHome() {
                           <button
                             type="button"
                             className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3 text-left transition hover:bg-muted/40"
-                            onClick={() => setSelectedRecipeId(recipe._id)}
+                            onClick={() => {
+                              setSelectedRecipeId(recipe._id)
+                              setDrawerMode('list')
+                            }}
                           >
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-foreground">
@@ -732,7 +804,7 @@ function CaloriesHome() {
               <Button type="button" onClick={handleLogRecipe} disabled={!canLog}>
                 Log
               </Button>
-            ) : (
+            ) : isAddNew ? null : (
               <Button type="button" onClick={handleAddNew}>
                 Add new
               </Button>

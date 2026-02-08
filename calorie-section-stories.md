@@ -200,7 +200,7 @@ Acceptance criteria:
 
 EPIC 3 — AI: Rough Estimate Mode (Fast)
 
-- [ ] **Story 3.1** — Add New screen: single textbox + two actions
+- [x] **Story 3.1** — Add New screen: single textbox + two actions
 
 As a user, I want one simple input field with clear options so logging is easy.
 
