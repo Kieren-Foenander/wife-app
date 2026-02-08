@@ -5,10 +5,11 @@ import { toast } from 'sonner'
 
 import { BottomNav } from '../components/BottomNav'
 import { Button } from '../components/ui/button'
-import { ListRowSkeleton } from '../components/ui/skeleton'
+import { ListRowSkeleton, Skeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import {
   APP_TIME_ZONE,
+  addDaysUTC,
   fromYYYYMMDD,
   startOfDayUTCFromDate,
   toYYYYMMDDUTC,
@@ -39,6 +40,12 @@ function formatNumber(value: number, maximumFractionDigits = 0): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits }).format(value)
 }
 
+function formatWeight(value: number): string {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(
+    value,
+  )
+}
+
 function formatTime(timestampMs: number): string {
   return new Intl.DateTimeFormat('en-US', {
     timeZone: APP_TIME_ZONE,
@@ -57,6 +64,112 @@ function formatPortion(entry: { grams?: number; servings?: number }): string {
     return `${servingsLabel} ${suffix}`
   }
   return 'Portion not set'
+}
+
+function WeightTrend({
+  entries,
+  startDayMs,
+  endDayMs,
+}: {
+  entries: Array<{ dayStartMs: number; kg: number }>
+  startDayMs: number
+  endDayMs: number
+}) {
+  if (entries.length < 2) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-2 py-10 text-center"
+        role="status"
+        aria-label="Weight trend empty state"
+      >
+        <p className="text-base font-medium text-foreground">
+          Add your weight to see trend
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Once you have a couple of weigh-ins, we&apos;ll plot your last 30
+          days.
+        </p>
+      </div>
+    )
+  }
+
+  const sorted = [...entries].sort((a, b) => a.dayStartMs - b.dayStartMs)
+  const weights = sorted.map((entry) => entry.kg)
+  const min = Math.min(...weights)
+  const max = Math.max(...weights)
+  const range = Math.max(max - min, 0.5)
+  const padding = range * 0.1
+  const minValue = min - padding
+  const maxValue = max + padding
+
+  const width = 320
+  const height = 140
+  const paddingX = 16
+  const paddingY = 18
+  const innerWidth = width - paddingX * 2
+  const innerHeight = height - paddingY * 2
+  const span = Math.max(endDayMs - startDayMs, 1)
+
+  const points = sorted.map((entry) => {
+    const x =
+      paddingX + ((entry.dayStartMs - startDayMs) / span) * innerWidth
+    const ratio = (entry.kg - minValue) / Math.max(maxValue - minValue, 1)
+    const y = paddingY + innerHeight - ratio * innerHeight
+    return { x, y }
+  })
+
+  const path = points
+    .map((point, index) =>
+      `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+    )
+    .join(' ')
+
+  const startLabel = new Date(startDayMs).toLocaleDateString('en-US', {
+    timeZone: APP_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+  })
+  const endLabel = new Date(endDayMs).toLocaleDateString('en-US', {
+    timeZone: APP_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+  })
+
+  return (
+    <div className="space-y-3">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-40 w-full"
+        role="img"
+        aria-label="Weight trend line chart"
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          className="text-primary"
+        />
+        {points.map((point, index) => (
+          <circle
+            key={index}
+            cx={point.x}
+            cy={point.y}
+            r={3.5}
+            className="fill-primary"
+          />
+        ))}
+      </svg>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{startLabel}</span>
+        <span>
+          {formatWeight(weights[0])} kg →{' '}
+          {formatWeight(weights[weights.length - 1])} kg
+        </span>
+        <span>{endLabel}</span>
+      </div>
+    </div>
+  )
 }
 
 function ProgressRing({
@@ -134,10 +247,18 @@ function CaloriesHome() {
     ? fromYYYYMMDD(dateStr)
     : fromYYYYMMDD(toYYYYMMDDUTC(new Date()))
   const dayStartMs = startOfDayUTCFromDate(selectedDate)
+  const todayDate = fromYYYYMMDD(toYYYYMMDDUTC(new Date()))
+  const weightRangeStartDate = addDaysUTC(todayDate, -29)
+  const weightRangeStart = startOfDayUTCFromDate(weightRangeStartDate)
+  const weightRangeEnd = startOfDayUTCFromDate(todayDate)
   const totals = useQuery(api.calorieEntries.getDayTotals, { dayStartMs })
   const entries = useQuery(api.calorieEntries.listEntriesForDay, {
     dayStartMs,
     order: 'desc',
+  })
+  const weightEntries = useQuery(api.weightEntries.listWeightEntriesForRange, {
+    startDayMs: weightRangeStart,
+    endDayMs: weightRangeEnd,
   })
   const isSelectedToday =
     dayStartMs === startOfDayUTCFromDate(new Date())
@@ -208,6 +329,39 @@ function CaloriesHome() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              30-day weight trend
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 p-6">
+            {weightEntries === undefined ? (
+              <div
+                className="flex flex-col gap-4"
+                role="status"
+                aria-label="Loading weight trend"
+              >
+                <Skeleton className="h-40 w-full" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ) : (
+              <WeightTrend
+                entries={weightEntries.map((entry) => ({
+                  dayStartMs: entry.dayStartMs,
+                  kg: entry.kg,
+                }))}
+                startDayMs={weightRangeStart}
+                endDayMs={weightRangeEnd}
+              />
+            )}
+          </div>
         </section>
 
         <section className="space-y-3">

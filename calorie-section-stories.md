@@ -108,7 +108,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 1.4** — 30-day weight graph on Home
+- [x] **Story 1.4** — 30-day weight graph on Home
 
 As a user, I want a 30-day weight trend graph so I’m motivated by progress.
 

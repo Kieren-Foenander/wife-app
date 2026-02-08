@@ -13,6 +13,7 @@ import type * as calorieSettings from "../calorieSettings.js";
 import type * as dateUtils from "../dateUtils.js";
 import type * as migrations from "../migrations.js";
 import type * as todos from "../todos.js";
+import type * as weightEntries from "../weightEntries.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   dateUtils: typeof dateUtils;
   migrations: typeof migrations;
   todos: typeof todos;
+  weightEntries: typeof weightEntries;
 }>;
 
 /**

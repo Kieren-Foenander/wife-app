@@ -51,4 +51,11 @@ export default defineSchema({
   })
     .index('byDayStartMs', ['dayStartMs'])
     .index('byDayStartMsTimestamp', ['dayStartMs', 'timestampMs']),
+  weightEntries: defineTable({
+    dayStartMs: v.number(),
+    timestampMs: v.number(),
+    kg: v.number(),
+  })
+    .index('byDayStartMs', ['dayStartMs'])
+    .index('byDayStartMsTimestamp', ['dayStartMs', 'timestampMs']),
 })
