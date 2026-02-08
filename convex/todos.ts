@@ -71,7 +71,8 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
     if (parentId) {
       const parent = await ctx.db.get(parentId as Id<'tasks'>)
       const hasRecurringParent =
-        isRecurringTask(parent) || (await hasRecurringAncestor(ctx, parentId as Id<'tasks'>))
+        isRecurringTask(parent) ||
+        (await hasRecurringAncestor(ctx, parentId as Id<'tasks'>))
       if (hasRecurringParent) {
         const recurringRows = await ctx.db
           .query('taskOrders')
@@ -99,7 +100,11 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
       if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
       if (aRecurring != null) return -1
       if (bRecurring != null) return 1
-    } else if (recurringOrderById.size > 0 && isRecurringTask(a) && isRecurringTask(b)) {
+    } else if (
+      recurringOrderById.size > 0 &&
+      isRecurringTask(a) &&
+      isRecurringTask(b)
+    ) {
       if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
       if (aRecurring != null) return -1
       if (bRecurring != null) return 1
@@ -112,7 +117,6 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
     return (originalIndex.get(a._id) ?? 0) - (originalIndex.get(b._id) ?? 0)
   })
 }
-
 
 const DAY_INTERVALS: Record<
   Exclude<Frequency, 'monthly' | 'quarterly' | '6-monthly' | 'yearly'>,
@@ -133,8 +137,6 @@ const MONTH_INTERVALS: Record<
   '6-monthly': 6,
   yearly: 12,
 }
-
-
 type TaskForDue = {
   dueDate?: number
   frequency?: Frequency
