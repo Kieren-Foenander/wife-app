@@ -160,7 +160,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 2.2** — Reuse saved recipe → confirm → log
+- [x] **Story 2.2** — Reuse saved recipe → confirm → log
 
 As a user, I want to tap a recipe and log it quickly.
 

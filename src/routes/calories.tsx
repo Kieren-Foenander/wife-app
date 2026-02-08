@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { Utensils } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -73,6 +73,20 @@ function formatPortion(entry: { grams?: number; servings?: number }): string {
     return `${servingsLabel} ${suffix}`
   }
   return 'Portion not set'
+}
+
+function caloriesForGrams({
+  grams,
+  defaultServingGrams,
+  caloriesPerServing,
+}: {
+  grams: number
+  defaultServingGrams: number | null | undefined
+  caloriesPerServing: number | null | undefined
+}): number {
+  if (!defaultServingGrams || defaultServingGrams <= 0) return 0
+  if (!caloriesPerServing || caloriesPerServing <= 0) return 0
+  return (caloriesPerServing / defaultServingGrams) * grams
 }
 
 function WeightTrend({
@@ -266,8 +280,11 @@ function CaloriesHome() {
     order: 'desc',
   })
   const recipes = useQuery(api.recipes.listRecipes)
+  const createEntry = useMutation(api.calorieEntries.createCalorieEntry)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [recipeSearch, setRecipeSearch] = useState('')
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null)
+  const [gramsInput, setGramsInput] = useState('')
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -276,6 +293,8 @@ function CaloriesHome() {
       const description = recipe.description?.toLowerCase() ?? ''
       return name.includes(normalizedSearch) || description.includes(normalizedSearch)
     }) ?? []
+  const selectedRecipe =
+    recipes?.find((recipe) => recipe._id === selectedRecipeId) ?? null
   const weightEntries = useQuery(api.weightEntries.listWeightEntriesForRange, {
     startDayMs: weightRangeStart,
     endDayMs: weightRangeEnd,
@@ -288,6 +307,50 @@ function CaloriesHome() {
   }
   const handleAddNew = () => {
     toast('Add new flow coming soon.')
+  }
+  const handleDrawerChange = (open: boolean) => {
+    setDrawerOpen(open)
+    if (!open) {
+      setSelectedRecipeId(null)
+      setRecipeSearch('')
+      setGramsInput('')
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedRecipe) return
+    if (selectedRecipe.defaultServingGrams != null) {
+      setGramsInput(String(selectedRecipe.defaultServingGrams))
+    } else {
+      setGramsInput('')
+    }
+  }, [selectedRecipe])
+
+  const parsedGrams = Number(gramsInput)
+  const grams = Number.isFinite(parsedGrams) ? parsedGrams : 0
+  const computedCalories = selectedRecipe
+    ? caloriesForGrams({
+      grams,
+      defaultServingGrams: selectedRecipe.defaultServingGrams ?? null,
+      caloriesPerServing: selectedRecipe.caloriesPerServing ?? null,
+    })
+    : 0
+  const canLog =
+    !!selectedRecipe && grams > 0 && computedCalories > 0 && !Number.isNaN(grams)
+  const handleLogRecipe = async () => {
+    if (!selectedRecipe) return
+    if (!canLog) {
+      toast('Add grams to log this recipe.')
+      return
+    }
+    await createEntry({
+      dayStartMs,
+      label: selectedRecipe.name,
+      calories: Math.round(computedCalories),
+      grams,
+    })
+    toast('Recipe logged.')
+    handleDrawerChange(false)
   }
 
   return (
@@ -478,107 +541,188 @@ function CaloriesHome() {
           </div>
         </section>
       </main>
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="bottom">
+      <Drawer open={drawerOpen} onOpenChange={handleDrawerChange} direction="bottom">
         <DrawerContent
           className="border-border bg-card"
           role="dialog"
           aria-label="Add entry"
         >
           <DrawerHeader>
-            <DrawerTitle className="text-foreground">Add entry</DrawerTitle>
-          </DrawerHeader>
-          <div className="flex flex-col gap-4 px-4 pb-4">
-            <div className="rounded-xl border border-border bg-card/70 p-4">
-              <label
-                htmlFor="recipe-search"
-                className="mb-2 block text-sm font-medium text-muted-foreground"
-              >
-                Search saved recipes
-              </label>
-              <input
-                id="recipe-search"
-                type="text"
-                value={recipeSearch}
-                onChange={(e) => setRecipeSearch(e.target.value)}
-                placeholder="Search by recipe name"
-                className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
-                aria-label="Search saved recipes"
-              />
+            <div className="flex items-center justify-between gap-3">
+              <DrawerTitle className="text-foreground">
+                {selectedRecipe ? 'Confirm entry' : 'Add entry'}
+              </DrawerTitle>
+              {selectedRecipe ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-auto px-0 text-sm text-muted-foreground"
+                  onClick={() => setSelectedRecipeId(null)}
+                >
+                  Back to list
+                </Button>
+              ) : null}
             </div>
-            <div className="rounded-2xl border border-border bg-card/70 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Saved recipes
+          </DrawerHeader>
+          {selectedRecipe ? (
+            <div className="flex flex-col gap-4 px-4 pb-4">
+              <div className="rounded-2xl border border-border bg-card/70 p-4">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  Recipe
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {selectedRecipe.name}
+                </p>
+                {selectedRecipe.description ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedRecipe.description}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Most used first
-                  </p>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {normalizedSearch ? `${visibleRecipes.length} matches` : ''}
-                </span>
+                ) : null}
               </div>
-              <div className="mt-3">
-                {recipes === undefined ? (
-                  <ul className="space-y-2">
-                    {[1, 2, 3].map((i) => (
-                      <ListRowSkeleton key={i} />
-                    ))}
-                  </ul>
-                ) : visibleRecipes.length === 0 ? (
-                  <div
-                    className="flex flex-col items-center justify-center gap-2 py-8 text-center"
-                    role="status"
-                    aria-label="No saved recipes"
-                  >
-                    <p className="text-sm font-medium text-foreground">
-                      {normalizedSearch
-                        ? 'No recipes match your search'
-                        : 'No saved recipes yet'}
+              <div className="rounded-2xl border border-border bg-card/70 p-4">
+                <label
+                  htmlFor="recipe-grams"
+                  className="mb-2 block text-sm font-medium text-muted-foreground"
+                >
+                  Serving size (grams)
+                </label>
+                <input
+                  id="recipe-grams"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="decimal"
+                  value={gramsInput}
+                  onChange={(e) => setGramsInput(e.target.value)}
+                  placeholder="Enter grams"
+                  className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                />
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                  <span>Calories for this amount</span>
+                  <span className="text-base font-semibold text-foreground">
+                    {formatCalories(computedCalories)} kcal
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/70 p-4">
+                <details>
+                  <summary className="cursor-pointer text-sm font-medium text-foreground">
+                    Details
+                  </summary>
+                  <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                    {selectedRecipe.ingredients ? (
+                      <p>{selectedRecipe.ingredients}</p>
+                    ) : null}
+                    {!selectedRecipe.ingredients ? (
+                      <p>No extra details saved for this recipe yet.</p>
+                    ) : null}
+                  </div>
+                </details>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 px-4 pb-4">
+              <div className="rounded-xl border border-border bg-card/70 p-4">
+                <label
+                  htmlFor="recipe-search"
+                  className="mb-2 block text-sm font-medium text-muted-foreground"
+                >
+                  Search saved recipes
+                </label>
+                <input
+                  id="recipe-search"
+                  type="text"
+                  value={recipeSearch}
+                  onChange={(e) => setRecipeSearch(e.target.value)}
+                  placeholder="Search by recipe name"
+                  className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                  aria-label="Search saved recipes"
+                />
+              </div>
+              <div className="rounded-2xl border border-border bg-card/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      Saved recipes
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {normalizedSearch
-                        ? 'Try a different name.'
-                        : 'Tap Add new to save a recipe.'}
+                      Most used first
                     </p>
                   </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {visibleRecipes.map((recipe) => (
-                      <li
-                        key={recipe._id}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3"
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {recipe.name}
-                          </p>
-                          {recipe.description ? (
-                            <p className="text-xs text-muted-foreground">
-                              {recipe.description}
-                            </p>
-                          ) : null}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {recipe.usageCount} uses
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                  <span className="text-xs text-muted-foreground">
+                    {normalizedSearch ? `${visibleRecipes.length} matches` : ''}
+                  </span>
+                </div>
+                <div className="mt-3">
+                  {recipes === undefined ? (
+                    <ul className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <ListRowSkeleton key={i} />
+                      ))}
+                    </ul>
+                  ) : visibleRecipes.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center gap-2 py-8 text-center"
+                      role="status"
+                      aria-label="No saved recipes"
+                    >
+                      <p className="text-sm font-medium text-foreground">
+                        {normalizedSearch
+                          ? 'No recipes match your search'
+                          : 'No saved recipes yet'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {normalizedSearch
+                          ? 'Try a different name.'
+                          : 'Tap Add new to save a recipe.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {visibleRecipes.map((recipe) => (
+                        <li key={recipe._id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3 text-left transition hover:bg-muted/40"
+                            onClick={() => setSelectedRecipeId(recipe._id)}
+                          >
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-foreground">
+                                {recipe.name}
+                              </p>
+                              {recipe.description ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {recipe.description}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {recipe.usageCount} uses
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
           <DrawerFooter className="flex-row justify-between border-t border-border pt-4">
             <DrawerClose asChild>
               <Button variant="secondary" aria-label="Close drawer">
                 Close
               </Button>
             </DrawerClose>
-            <Button type="button" onClick={handleAddNew}>
-              Add new
-            </Button>
+            {selectedRecipe ? (
+              <Button type="button" onClick={handleLogRecipe} disabled={!canLog}>
+                Log
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleAddNew}>
+                Add new
+              </Button>
+            )}
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
