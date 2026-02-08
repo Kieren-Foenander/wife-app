@@ -6,6 +6,9 @@
                 "-y",
                 "@playwright/mcp@latest"
             ]
-        }
+        }, "tanstack": {
+      "command": "npx",
+      "args": ["@tanstack/cli", "mcp"]
+    }
     }
 }
