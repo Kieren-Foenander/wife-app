@@ -97,6 +97,21 @@ type RoughEstimate = {
   notes: Array<string>
 }
 
+type AccurateEstimateItem = {
+  name: string
+  grams: number
+  calories: number
+  caloriesPer100g: number
+  source: 'parsed' | 'defaulted'
+}
+
+type AccurateEstimate = {
+  calories: number
+  items: Array<AccurateEstimateItem>
+  assumptions: Array<string>
+  notes: Array<string>
+}
+
 const ROUGH_DEFAULT_SERVING_GRAMS = 100
 
 const ROUGH_ESTIMATE_RULES: Array<{
@@ -233,6 +248,209 @@ function getRoughEstimate(input: string): RoughEstimate {
       'Assumed 1 serving (standard portion).',
     ],
     notes: ['Inferred portion: 1 serving.', 'Add more detail for accuracy.'],
+  }
+}
+
+const UNIT_GRAMS: Record<string, number> = {
+  g: 1,
+  gram: 1,
+  grams: 1,
+  kg: 1000,
+  kilogram: 1000,
+  kilograms: 1000,
+  oz: 28.3495,
+  ounce: 28.3495,
+  ounces: 28.3495,
+  lb: 453.592,
+  lbs: 453.592,
+  pound: 453.592,
+  pounds: 453.592,
+  ml: 1,
+  milliliter: 1,
+  milliliters: 1,
+  l: 1000,
+  liter: 1000,
+  liters: 1000,
+  tsp: 5,
+  teaspoon: 5,
+  teaspoons: 5,
+  tbsp: 15,
+  tablespoon: 15,
+  tablespoons: 15,
+  cup: 240,
+  cups: 240,
+}
+
+const CALORIE_DENSITY_RULES: Array<{
+  label: string
+  caloriesPer100g: number
+  patterns: Array<RegExp>
+}> = [
+  { label: 'Oil', caloriesPer100g: 884, patterns: [/oil/, /olive/] },
+  { label: 'Butter', caloriesPer100g: 717, patterns: [/butter/] },
+  { label: 'Nuts', caloriesPer100g: 600, patterns: [/nut/, /almond/, /peanut/] },
+  { label: 'Cheese', caloriesPer100g: 400, patterns: [/cheese/] },
+  { label: 'Beef', caloriesPer100g: 250, patterns: [/beef/, /steak/] },
+  { label: 'Pork', caloriesPer100g: 242, patterns: [/pork/, /bacon/] },
+  { label: 'Chicken', caloriesPer100g: 165, patterns: [/chicken/, /turkey/] },
+  { label: 'Fish', caloriesPer100g: 200, patterns: [/salmon/, /tuna/, /fish/] },
+  { label: 'Rice', caloriesPer100g: 130, patterns: [/rice/] },
+  { label: 'Pasta', caloriesPer100g: 150, patterns: [/pasta/, /noodle/, /spaghetti/] },
+  { label: 'Bread', caloriesPer100g: 265, patterns: [/bread/, /toast/, /wrap/] },
+  { label: 'Eggs', caloriesPer100g: 155, patterns: [/egg/] },
+  { label: 'Potato', caloriesPer100g: 77, patterns: [/potato/] },
+  { label: 'Fruit', caloriesPer100g: 60, patterns: [/apple/, /banana/, /berry/, /fruit/] },
+  { label: 'Vegetables', caloriesPer100g: 50, patterns: [/veg/, /salad/, /broccoli/, /carrot/, /spinach/] },
+  { label: 'Dairy', caloriesPer100g: 60, patterns: [/milk/, /yogurt/] },
+  { label: 'Sugar', caloriesPer100g: 387, patterns: [/sugar/, /honey/] },
+]
+
+function parseQuantity(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const parts = trimmed.split(' ').filter(Boolean)
+  if (parts.length === 2 && parts[1].includes('/')) {
+    const whole = Number(parts[0])
+    const [num, den] = parts[1].split('/').map(Number)
+    if (Number.isFinite(whole) && Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+      return whole + num / den
+    }
+  }
+  if (trimmed.includes('/')) {
+    const [num, den] = trimmed.split('/').map(Number)
+    if (Number.isFinite(num) && Number.isFinite(den) && den !== 0) {
+      return num / den
+    }
+  }
+  const value = Number(trimmed)
+  return Number.isFinite(value) ? value : null
+}
+
+function normalizeUnit(raw: string | undefined): string | null {
+  if (!raw) return null
+  const normalized = raw.toLowerCase()
+  return UNIT_GRAMS[normalized] ? normalized : null
+}
+
+function getCaloriesPer100g(name: string): {
+  caloriesPer100g: number
+  matchedLabel: string | null
+} {
+  const normalized = name.toLowerCase()
+  const match = CALORIE_DENSITY_RULES.find((rule) =>
+    rule.patterns.some((pattern) => pattern.test(normalized)),
+  )
+  if (match) {
+    return { caloriesPer100g: match.caloriesPer100g, matchedLabel: match.label }
+  }
+  return { caloriesPer100g: 120, matchedLabel: null }
+}
+
+function parseAccurateLine(line: string): {
+  name: string
+  grams: number
+  caloriesPer100g: number
+  notes: Array<string>
+  source: 'parsed' | 'defaulted'
+} | null {
+  const trimmed = line.trim()
+  if (!trimmed) return null
+
+  const attachedMatch = trimmed.match(/^(\d+(?:\.\d+)?)([a-zA-Z]+)\s+(.*)$/)
+  let quantityRaw = ''
+  let unitRaw: string | undefined
+  let name = ''
+  if (attachedMatch) {
+    quantityRaw = attachedMatch[1]
+    unitRaw = attachedMatch[2]
+    name = attachedMatch[3]
+  } else {
+    const splitMatch = trimmed.match(/^([\d\s./]+)?\s*([a-zA-Z]+)?\s*(.*)$/)
+    if (!splitMatch) return null
+    quantityRaw = splitMatch[1]
+    unitRaw = splitMatch[2]
+    name = splitMatch[3]
+  }
+
+  const quantity = parseQuantity(quantityRaw)
+  const normalizedUnit = normalizeUnit(unitRaw)
+  const notes: Array<string> = []
+  const safeName = name.trim() || 'Ingredient'
+  let grams = 0
+  let source: 'parsed' | 'defaulted' = 'parsed'
+
+  if (quantity == null) {
+    grams = 100
+    source = 'defaulted'
+    notes.push(`Assumed 100g for ${safeName}.`)
+  } else if (normalizedUnit) {
+    grams = quantity * UNIT_GRAMS[normalizedUnit]
+  } else {
+    grams = quantity
+    source = 'defaulted'
+    notes.push(`Assumed grams for ${safeName} (unit not recognized).`)
+  }
+
+  const { caloriesPer100g, matchedLabel } = getCaloriesPer100g(safeName)
+  if (!matchedLabel) {
+    notes.push(`Used a general calorie density for ${safeName}.`)
+  }
+  return { name: safeName, grams, caloriesPer100g, notes, source }
+}
+
+function getAccurateEstimate(input: string): AccurateEstimate {
+  const lines = input
+    .split(/[\n,]+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const assumptions = [
+    'Converted common kitchen measures to grams using standard conversions.',
+    'Calorie densities are typical values for each ingredient type.',
+  ]
+  const notes: Array<string> = []
+  const items: Array<AccurateEstimateItem> = []
+
+  for (const line of lines) {
+    const parsed = parseAccurateLine(line)
+    if (!parsed) continue
+    notes.push(...parsed.notes)
+    const calories = (parsed.caloriesPer100g / 100) * parsed.grams
+    items.push({
+      name: parsed.name,
+      grams: parsed.grams,
+      calories,
+      caloriesPer100g: parsed.caloriesPer100g,
+      source: parsed.source,
+    })
+  }
+
+  if (items.length === 0) {
+    const fallback = getRoughEstimate(input)
+    return {
+      calories: fallback.calories,
+      items: [
+        {
+          name: fallback.label,
+          grams: ROUGH_DEFAULT_SERVING_GRAMS,
+          calories: fallback.calories,
+          caloriesPer100g: Math.round((fallback.calories / ROUGH_DEFAULT_SERVING_GRAMS) * 100),
+          source: 'defaulted',
+        },
+      ],
+      assumptions: [
+        ...assumptions,
+        'No ingredients parsed; used a quick estimate instead.',
+      ],
+      notes: [...fallback.notes],
+    }
+  }
+
+  const calories = items.reduce((sum, item) => sum + item.calories, 0)
+  return {
+    calories,
+    items,
+    assumptions,
+    notes,
   }
 }
 
@@ -436,6 +654,9 @@ function CaloriesHome() {
   const [addNewText, setAddNewText] = useState('')
   const [roughEstimate, setRoughEstimate] = useState<RoughEstimate | null>(null)
   const [roughGramsInput, setRoughGramsInput] = useState('')
+  const [accurateEstimate, setAccurateEstimate] = useState<AccurateEstimate | null>(
+    null,
+  )
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -487,7 +708,8 @@ function CaloriesHome() {
       toast('Add a short description first.')
       return
     }
-    toast('Accurate estimate coming soon.')
+    setRoughEstimate(null)
+    setAccurateEstimate(getAccurateEstimate(addNewText))
   }
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open)
@@ -499,6 +721,7 @@ function CaloriesHome() {
       setAddNewText('')
       setRoughEstimate(null)
       setRoughGramsInput('')
+      setAccurateEstimate(null)
     }
   }
 
@@ -514,6 +737,11 @@ function CaloriesHome() {
   useEffect(() => {
     if (!roughEstimate) return
     setRoughEstimate(null)
+  }, [addNewText])
+
+  useEffect(() => {
+    if (!accurateEstimate) return
+    setAccurateEstimate(null)
   }, [addNewText])
 
   useEffect(() => {
@@ -939,6 +1167,63 @@ function CaloriesHome() {
                           ))}
                         </ul>
                       </div>
+                    </div>
+                  </details>
+                </div>
+              ) : null}
+              {accurateEstimate ? (
+                <div className="rounded-2xl border border-border bg-card/70 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                    Accurate estimate
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    {formatCalories(accurateEstimate.calories)} kcal
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Based on your ingredient list
+                  </p>
+                  <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                    {accurateEstimate.items.map((item, index) => (
+                      <div
+                        key={`${item.name}-${item.grams}-${index}`}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span>
+                          {item.name} · {formatNumber(item.grams, 0)} g
+                        </span>
+                        <span className="text-foreground">
+                          {formatCalories(item.calories)} kcal
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-medium text-foreground">
+                      Details
+                    </summary>
+                    <div className="mt-2 space-y-3 text-sm text-muted-foreground">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                          Assumptions
+                        </p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {accurateEstimate.assumptions.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      {accurateEstimate.notes.length > 0 ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                            Notes
+                          </p>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {accurateEstimate.notes.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
                   </details>
                 </div>

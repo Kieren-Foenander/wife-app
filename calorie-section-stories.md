@@ -280,7 +280,7 @@ Acceptance criteria:
 
 EPIC 4 — AI: Accurate Mode (Ingredients + Skippable Follow-ups)
 
-- [ ] **Story 4.1** — Accurate mode parses free-text ingredients with mixed units
+- [x] **Story 4.1** — Accurate mode parses free-text ingredients with mixed units
 
 As a user, I want to paste a list of ingredients and have the app estimate calories.
 
