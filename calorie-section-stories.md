@@ -8,7 +8,7 @@
 
 EPIC 0 — Foundations (Day, Goal, Totals)
 
-**Codebase:** Convex: add tables in `convex/schema.ts` (e.g. `calorieEntries`, `recipes`, `weightEntries`, `userSettings`). Define indexes for every filter/order — see AGENTS.md. Use `dateUtils.startOfDayUTCFromDate` for day keys.
+**Codebase:** Convex: add tables in `convex/schema.ts` (e.g. `calorieEntries`, `recipes`, `weightEntries`, `userSettings`). Define indexes for every filter/order — see AGENTS.md. Use `dateUtils.startOfDayUTCFromDate` for day keys. **Timezone:** days are Australia/Brisbane (same as Tasks); Convex day normalization must match `dateUtils`.
 
 - [x] **Story 0.1** — Define daily goal settings (deficit + maintenance)
 
@@ -38,7 +38,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 0.3** — Timestamped entries model
+- [x] **Story 0.3** — Timestamped entries model
 
 As a user, I want entries to have timestamps so I can see what I ate when.
 
@@ -50,13 +50,15 @@ Acceptance criteria:
 
 - If adding to a past day, default timestamp is a sensible time (e.g., midday) or “now” but pinned to that day (define in UI copy).
 
+- Day normalization uses Australia/Brisbane boundaries (same as Tasks).
+
 ---
 
 EPIC 1 — Home (At-a-glance)
 
 - [ ] **Story 1.1** — Home shows calories remaining and consumed
 
-**Codebase:** Home = default view at `/calories` (no `date` or `?date=today`). Shared bottom nav: “Calories” active on this route. Use `dateUtils` for “today” (UTC).
+**Codebase:** Home = default view at `/calories` (no `date` or `?date=today`). Shared bottom nav: “Calories” active on this route. Use `dateUtils` for “today” (Australia/Brisbane).
 
 As a user, I want to see remaining calories immediately when I open the app.
 

@@ -1,10 +1,12 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { getGoalForDateInternal } from './calorieSettings'
+import { startOfDayUTC } from './dateUtils'
 
-function startOfDayUTC(ms: number): number {
-  const d = new Date(ms)
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+function defaultTimestampForDay(dayStartMs: number): number {
+  const todayStartMs = startOfDayUTC(Date.now())
+  if (dayStartMs === todayStartMs) return Date.now()
+  return dayStartMs + 12 * 60 * 60 * 1000
 }
 
 export const listEntriesForDay = query({
@@ -54,7 +56,7 @@ export const createCalorieEntry = mutation({
   },
   handler: async (ctx, args) => {
     const dayStartMs = startOfDayUTC(args.dayStartMs)
-    const timestampMs = args.timestampMs ?? Date.now()
+    const timestampMs = args.timestampMs ?? defaultTimestampForDay(dayStartMs)
     return await ctx.db.insert('calorieEntries', {
       dayStartMs,
       timestampMs,

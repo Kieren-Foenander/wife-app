@@ -12,6 +12,7 @@ Calories is a **second section** of the same app: same bottom nav, same layout a
 
 - **`/calories`** (optional `?date=YYYY-MM-DD`): Calories home (today dashboard) or day detail when `date` is set. Same URL pattern as Tasks (`/` with `?date=`).
 - Day selection (calendar, “Jump to Today”) updates `?date=YYYY-MM-DD`; no date = today. Use `fromYYYYMMDD` / `toYYYYMMDDUTC` from `src/lib/dateUtils.ts` for parsing and formatting.
+- **Timezone**: Day boundaries are **Australia/Brisbane** (same as Tasks). Use `dateUtils` on the client and matching Brisbane start-of-day logic in Convex for any day-scoped queries.
 
 ### Bottom nav
 

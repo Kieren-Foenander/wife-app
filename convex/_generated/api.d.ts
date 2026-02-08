@@ -10,6 +10,7 @@
 
 import type * as calorieEntries from "../calorieEntries.js";
 import type * as calorieSettings from "../calorieSettings.js";
+import type * as dateUtils from "../dateUtils.js";
 import type * as migrations from "../migrations.js";
 import type * as todos from "../todos.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   calorieEntries: typeof calorieEntries;
   calorieSettings: typeof calorieSettings;
+  dateUtils: typeof dateUtils;
   migrations: typeof migrations;
   todos: typeof todos;
 }>;
