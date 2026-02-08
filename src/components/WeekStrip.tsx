@@ -1,4 +1,9 @@
-import { getWeekDatesFor, startOfDayUTCFromDate } from '../lib/dateUtils'
+import {
+  APP_TIME_ZONE,
+  getDatePartsInTimeZone,
+  getWeekDatesFor,
+  startOfDayUTCFromDate,
+} from '../lib/dateUtils'
 
 export function WeekStrip({
   selectedDate,
@@ -8,13 +13,7 @@ export function WeekStrip({
   onSelectDay: (d: Date) => void
 }) {
   const weekDates = getWeekDatesFor(selectedDate)
-  const todayUTC = new Date(
-    Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate(),
-    ),
-  )
+  const todayStartMs = startOfDayUTCFromDate(new Date())
 
   return (
     <section
@@ -24,12 +23,10 @@ export function WeekStrip({
     >
       <div className="flex min-w-0 gap-2">
         {weekDates.map((d) => {
-          const isToday =
-            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
-            d.getUTCMonth() === todayUTC.getUTCMonth() &&
-            d.getUTCDate() === todayUTC.getUTCDate()
+          const isToday = d.getTime() === todayStartMs
           const isSelected =
             d.getTime() === startOfDayUTCFromDate(selectedDate)
+          const { day } = getDatePartsInTimeZone(d)
           return (
             <button
               type="button"
@@ -42,6 +39,7 @@ export function WeekStrip({
                   : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
+                timeZone: APP_TIME_ZONE,
                 weekday: 'long',
                 month: 'short',
                 day: 'numeric',
@@ -49,10 +47,13 @@ export function WeekStrip({
               aria-pressed={isSelected}
             >
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                {d.toLocaleDateString('en-US', {
+                  timeZone: APP_TIME_ZONE,
+                  weekday: 'short',
+                })}
               </span>
               <span className="text-lg font-semibold tabular-nums">
-                {d.getUTCDate()}
+                {day}
               </span>
               {isToday ? (
                 <span className="pointer-events-none absolute -right-4 -top-2 rounded bg-accent/70 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-accent-foreground rotate-12">

@@ -17,7 +17,7 @@ import { ListRowSkeleton } from '../../components/ui/skeleton'
 import { Spinner } from '../../components/ui/spinner'
 import { api } from '../../../convex/_generated/api'
 import { TaskCompletionIndicator } from '../../components/TaskCompletionIndicator'
-import { startOfDayUTCFromDate } from '../../lib/dateUtils'
+import { fromYYYYMMDD, startOfDayUTCFromDate } from '../../lib/dateUtils'
 import { buildTaskChildrenViewKey } from '../../lib/taskOrder'
 import { useReorderTasks } from '../../lib/useReorderTasks'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -39,9 +39,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskDetail() {
   const { taskId } = Route.useParams()
   const { date: dateStr } = Route.useSearch()
-  const selectedDate = dateStr
-    ? new Date(`${dateStr}T00:00:00.000Z`)
-    : new Date()
+  const selectedDate = dateStr ? fromYYYYMMDD(dateStr) : new Date()
   const dayStartMs = startOfDayUTCFromDate(selectedDate)
   const task = useQuery(api.todos.getTask, { id: taskId as Id<'tasks'> })
   const ancestors = useQuery(api.todos.listTaskAncestors, {

@@ -15,6 +15,7 @@ import { SortableTaskList } from '../components/SortableTaskList'
 import { TaskRow } from '../components/TaskRow'
 import { WeekStrip } from '../components/WeekStrip'
 import {
+  APP_TIME_ZONE,
   addDaysUTC,
   addMonthsUTC,
   fromYYYYMMDD,
@@ -212,12 +213,14 @@ function DailyView() {
   const rangeLabel =
     rangeMode === 'month'
       ? selectedDate.toLocaleDateString('en-US', {
+        timeZone: APP_TIME_ZONE,
         month: 'long',
         year: 'numeric',
       })
       : (() => {
         const weekStart = getWeekDatesFor(selectedDate)[0]
         return `Week of ${weekStart.toLocaleDateString('en-US', {
+          timeZone: APP_TIME_ZONE,
           month: 'short',
           day: 'numeric',
         })}`
@@ -238,9 +241,11 @@ function DailyView() {
             <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
               {isSelectedToday
                 ? `Today - ${selectedDate.toLocaleDateString('en-US', {
+                  timeZone: APP_TIME_ZONE,
                   weekday: 'long',
                 })}`
                 : selectedDate.toLocaleDateString('en-US', {
+                  timeZone: APP_TIME_ZONE,
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',

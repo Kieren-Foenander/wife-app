@@ -1,4 +1,9 @@
-import { getMonthGridFor, startOfDayUTCFromDate } from '../lib/dateUtils'
+import {
+  APP_TIME_ZONE,
+  getDatePartsInTimeZone,
+  getMonthGridFor,
+  startOfDayUTCFromDate,
+} from '../lib/dateUtils'
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -10,13 +15,7 @@ export function MonthGrid({
   onSelectDay: (d: Date) => void
 }) {
   const grid = getMonthGridFor(selectedDate)
-  const todayUTC = new Date(
-    Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate(),
-    ),
-  )
+  const todayStartMs = startOfDayUTCFromDate(new Date())
 
   return (
     <section
@@ -42,11 +41,9 @@ export function MonthGrid({
               />
             )
           }
-          const isToday =
-            d.getUTCFullYear() === todayUTC.getUTCFullYear() &&
-            d.getUTCMonth() === todayUTC.getUTCMonth() &&
-            d.getUTCDate() === todayUTC.getUTCDate()
+          const isToday = d.getTime() === todayStartMs
           const isSelected = d.getTime() === startOfDayUTCFromDate(selectedDate)
+          const { day } = getDatePartsInTimeZone(d)
           return (
             <button
               type="button"
@@ -59,13 +56,14 @@ export function MonthGrid({
                   : 'border-border bg-background/60 text-muted-foreground hover:bg-accent/40'
                 }`}
               aria-label={d.toLocaleDateString('en-US', {
+                timeZone: APP_TIME_ZONE,
                 month: 'short',
                 day: 'numeric',
               })}
               aria-pressed={isSelected}
             >
               <span className="text-sm font-medium tabular-nums">
-                {d.getUTCDate()}
+                {day}
               </span>
               {isToday ? (
                 <span className="pointer-events-none absolute -right-4 -top-2 rounded bg-accent/70 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-accent-foreground rotate-12">
