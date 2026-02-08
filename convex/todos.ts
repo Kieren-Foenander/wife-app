@@ -16,6 +16,18 @@ type Frequency =
   | 'yearly'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
+const APP_TIME_ZONE = 'Australia/Brisbane'
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  hourCycle: 'h23',
+})
 const ROOT_DAY_PREFIX = 'root-day:'
 const ROOT_RECURRING_VIEW_KEY = 'root-recurring'
 const CHILDREN_PREFIX = 'children:'
@@ -112,10 +124,54 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
   })
 }
 
-/** Start of day UTC (00:00:00.000) for a given timestamp. */
+function getDateTimeParts(ms: number): {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+} {
+  const parts = DATE_TIME_FORMATTER.formatToParts(new Date(ms))
+  const values: Record<string, string> = {}
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      values[part.type] = part.value
+    }
+  }
+  return {
+    year: Number(values.year),
+    month: Number(values.month),
+    day: Number(values.day),
+    hour: Number(values.hour),
+    minute: Number(values.minute),
+    second: Number(values.second),
+  }
+}
+
+function getTimeZoneOffsetMs(ms: number): number {
+  const parts = getDateTimeParts(ms)
+  const asUTC = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  )
+  return asUTC - ms
+}
+
+function startOfDayFromParts(year: number, month: number, day: number): number {
+  const utcMidnight = Date.UTC(year, month - 1, day)
+  const offsetMs = getTimeZoneOffsetMs(utcMidnight)
+  return utcMidnight - offsetMs
+}
+
+/** Start of day in Australia/Brisbane (00:00:00.000 local). */
 function startOfDayUTC(ms: number): number {
-  const d = new Date(ms)
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  const { year, month, day } = getDateTimeParts(ms)
+  return startOfDayFromParts(year, month, day)
 }
 
 const DAY_INTERVALS: Record<
@@ -138,17 +194,16 @@ const MONTH_INTERVALS: Record<
   yearly: 12,
 }
 
-/** Add months to a date (UTC), clamping day if needed). */
+/** Add months to a date (Brisbane), clamping day if needed). */
 function addMonthsUTC(ms: number, months: number): number {
-  const d = new Date(ms)
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth() + months
-  const day = d.getUTCDate()
-  const normalized = new Date(Date.UTC(y, m, 1))
-  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-  return Date.UTC(
+  const { year, month, day } = getDateTimeParts(ms)
+  const normalized = new Date(Date.UTC(year, month - 1 + months, 1))
+  const lastDay = new Date(
+    Date.UTC(normalized.getUTCFullYear(), normalized.getUTCMonth() + 1, 0),
+  ).getUTCDate()
+  return startOfDayFromParts(
     normalized.getUTCFullYear(),
-    normalized.getUTCMonth(),
+    normalized.getUTCMonth() + 1,
     Math.min(day, lastDay),
   )
 }

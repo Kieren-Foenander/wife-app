@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from './ui/button'
+import { fromYYYYMMDD, toYYYYMMDDUTC } from '../lib/dateUtils'
 import {
   Drawer,
   DrawerClose,
@@ -56,16 +57,12 @@ export type EditTaskData = {
 
 /** Format Date as YYYY-MM-DD for input[type="date"]. */
 function toDateInputValue(d: Date): string {
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return toYYYYMMDDUTC(d)
 }
 
-/** Parse YYYY-MM-DD to UTC start-of-day ms. */
+/** Parse YYYY-MM-DD to Brisbane start-of-day ms. */
 function parseDateToUTCStartMs(s: string): number {
-  const [y, m = 1, d = 1] = s.split('-').map(Number)
-  return Date.UTC(y, m - 1, d)
+  return fromYYYYMMDD(s).getTime()
 }
 
 type CreationDrawerProps = {
