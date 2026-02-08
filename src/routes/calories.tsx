@@ -999,6 +999,11 @@ function CaloriesHome() {
       : 0
   const accurateServingCalories =
     accurateEstimate == null ? 0 : accurateServingGrams * accurateCaloriesPerGram
+  const canLogAccurate =
+    accurateEstimate != null &&
+    accurateServingGrams > 0 &&
+    accurateServingCalories > 0 &&
+    !Number.isNaN(accurateServingCalories)
   const handleLogRecipe = async () => {
     if (!selectedRecipe) return
     if (!canLog) {
@@ -1012,6 +1017,24 @@ function CaloriesHome() {
       grams,
     })
     toast('Recipe logged.')
+    handleDrawerChange(false)
+  }
+
+  const handleLogAccurate = async () => {
+    if (!accurateEstimate) return
+    if (!canLogAccurate) {
+      toast('Add grams to log this entry.')
+      return
+    }
+    const trimmedLabel = addNewText.trim()
+    const fallbackLabel = accurateEstimate.items[0]?.name ?? 'Meal'
+    await createEntry({
+      dayStartMs,
+      label: trimmedLabel || fallbackLabel,
+      calories: Math.round(accurateServingCalories),
+      grams: accurateServingGrams,
+    })
+    toast('Entry logged.')
     handleDrawerChange(false)
   }
 
@@ -1526,7 +1549,7 @@ function CaloriesHome() {
                   </div>
                   <div className="mt-4 rounded-xl border border-border/70 bg-background/70 p-3">
                     <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                      Default serving
+                      Confirm portion
                     </p>
                     <label
                       htmlFor="accurate-serving-grams"
@@ -1552,7 +1575,7 @@ function CaloriesHome() {
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Adjust before saving or logging.
+                      Adjust grams before logging.
                     </p>
                   </div>
                   <details className="mt-4">
@@ -1728,6 +1751,14 @@ function CaloriesHome() {
             ) : isAddNew ? (
               roughEstimate ? (
                 <Button type="button" onClick={handleLogRough} disabled={!canLogRough}>
+                  Log
+                </Button>
+              ) : accurateEstimate ? (
+                <Button
+                  type="button"
+                  onClick={handleLogAccurate}
+                  disabled={!canLogAccurate}
+                >
                   Log
                 </Button>
               ) : null

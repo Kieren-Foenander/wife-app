@@ -326,7 +326,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 4.4** — Accurate confirm/log uses grams-based portioning
+- [x] **Story 4.4** — Accurate confirm/log uses grams-based portioning
 
 As a user, I want to log by grams using my kitchen scale for accuracy.
 
