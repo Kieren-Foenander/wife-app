@@ -217,7 +217,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 3.2** — Rough estimate returns single calorie estimate (slightly high bias)
+- [x] **Story 3.2** — Rough estimate returns single calorie estimate (slightly high bias)
 
 As a user, I want a single best estimate so I can log quickly without thinking.
 

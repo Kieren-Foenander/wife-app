@@ -89,6 +89,135 @@ function caloriesForGrams({
   return (caloriesPerServing / defaultServingGrams) * grams
 }
 
+type RoughEstimate = {
+  calories: number
+  label: string
+  basis: 'matched' | 'fallback'
+}
+
+const ROUGH_ESTIMATE_RULES: Array<{
+  label: string
+  minCalories: number
+  maxCalories: number
+  patterns: Array<RegExp>
+}> = [
+  {
+    label: 'Salad',
+    minCalories: 150,
+    maxCalories: 350,
+    patterns: [/salad/],
+  },
+  {
+    label: 'Sandwich or wrap',
+    minCalories: 350,
+    maxCalories: 650,
+    patterns: [/sandwich/, /wrap/],
+  },
+  {
+    label: 'Burger',
+    minCalories: 500,
+    maxCalories: 850,
+    patterns: [/burger/],
+  },
+  {
+    label: 'Pasta',
+    minCalories: 450,
+    maxCalories: 750,
+    patterns: [/pasta/, /spaghetti/, /noodle/],
+  },
+  {
+    label: 'Rice bowl',
+    minCalories: 400,
+    maxCalories: 700,
+    patterns: [/rice/, /bowl/, /stir fry/],
+  },
+  {
+    label: 'Curry',
+    minCalories: 500,
+    maxCalories: 800,
+    patterns: [/curry/],
+  },
+  {
+    label: 'Soup',
+    minCalories: 200,
+    maxCalories: 420,
+    patterns: [/soup/],
+  },
+  {
+    label: 'Breakfast',
+    minCalories: 250,
+    maxCalories: 500,
+    patterns: [/oat/, /porridge/, /yogurt/, /egg/, /omelet/],
+  },
+  {
+    label: 'Snack',
+    minCalories: 200,
+    maxCalories: 450,
+    patterns: [/snack/, /chips/, /cookie/, /chocolate/],
+  },
+  {
+    label: 'Smoothie',
+    minCalories: 250,
+    maxCalories: 480,
+    patterns: [/smoothie/],
+  },
+  {
+    label: 'Coffee',
+    minCalories: 120,
+    maxCalories: 260,
+    patterns: [/latte/, /cappuccino/, /coffee/],
+  },
+  {
+    label: 'Dessert',
+    minCalories: 350,
+    maxCalories: 650,
+    patterns: [/dessert/, /cake/, /ice cream/],
+  },
+]
+
+function buildRoughLabel(input: string): string {
+  const trimmed = input.trim()
+  if (!trimmed) return 'Meal'
+  const words = trimmed.split(/\s+/).slice(0, 6).join(' ')
+  return words.length < trimmed.length ? `${words}…` : words
+}
+
+function getRoughEstimate(input: string): RoughEstimate {
+  const normalized = input.trim().toLowerCase()
+  const matchedRules = ROUGH_ESTIMATE_RULES.filter((rule) =>
+    rule.patterns.some((pattern) => pattern.test(normalized)),
+  )
+
+  if (matchedRules.length > 0) {
+    const min =
+      matchedRules.reduce((sum, rule) => sum + rule.minCalories, 0) /
+      matchedRules.length
+    const max =
+      matchedRules.reduce((sum, rule) => sum + rule.maxCalories, 0) /
+      matchedRules.length
+    const midpoint = (min + max) / 2
+    const estimate = Math.round(midpoint * 1.05)
+    const primaryLabel =
+      matchedRules.length === 1
+        ? matchedRules[0].label
+        : `${matchedRules[0].label} + more`
+    return {
+      calories: estimate,
+      label: primaryLabel,
+      basis: 'matched',
+    }
+  }
+
+  const fallbackMin = 350
+  const fallbackMax = 700
+  const fallbackEstimate = Math.round(((fallbackMin + fallbackMax) / 2) * 1.1)
+  return {
+    calories: fallbackEstimate,
+    label: buildRoughLabel(input),
+    basis: 'fallback',
+  }
+}
+
 function WeightTrend({
   entries,
   startDayMs,
@@ -287,6 +416,7 @@ function CaloriesHome() {
   const [gramsInput, setGramsInput] = useState('')
   const [drawerMode, setDrawerMode] = useState<'list' | 'addNew'>('list')
   const [addNewText, setAddNewText] = useState('')
+  const [roughEstimate, setRoughEstimate] = useState<RoughEstimate | null>(null)
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -331,7 +461,7 @@ function CaloriesHome() {
       toast('Add a short description first.')
       return
     }
-    toast('Rough estimate coming soon.')
+    setRoughEstimate(getRoughEstimate(addNewText))
   }
   const handleRunAccurateEstimate = () => {
     if (!addNewText.trim()) {
@@ -348,6 +478,7 @@ function CaloriesHome() {
       setGramsInput('')
       setDrawerMode('list')
       setAddNewText('')
+      setRoughEstimate(null)
     }
   }
 
@@ -359,6 +490,11 @@ function CaloriesHome() {
       setGramsInput('')
     }
   }, [selectedRecipe])
+
+  useEffect(() => {
+    if (!roughEstimate) return
+    setRoughEstimate(null)
+  }, [addNewText])
 
   const parsedGrams = Number(gramsInput)
   const grams = Number.isFinite(parsedGrams) ? parsedGrams : 0
@@ -702,6 +838,31 @@ function CaloriesHome() {
                   Accurate (add ingredients)
                 </Button>
               </div>
+              {roughEstimate ? (
+                <div className="rounded-2xl border border-border bg-card/70 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                    Rough estimate
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    {formatCalories(roughEstimate.calories)} kcal
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    For 1 serving
+                  </p>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Interpreted as{' '}
+                    <span className="font-medium text-foreground">
+                      {roughEstimate.label}
+                    </span>
+                    .
+                  </p>
+                  {roughEstimate.basis === 'fallback' ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      This is a quick best guess based on your description.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col gap-4 px-4 pb-4">
