@@ -56,7 +56,7 @@ Acceptance criteria:
 
 EPIC 1 — Home (At-a-glance)
 
-- [ ] **Story 1.1** — Home shows calories remaining and consumed
+- [x] **Story 1.1** — Home shows calories remaining and consumed
 
 **Codebase:** Home = default view at `/calories` (no `date` or `?date=today`). Shared bottom nav: “Calories” active on this route. Use `dateUtils` for “today” (Australia/Brisbane).
 

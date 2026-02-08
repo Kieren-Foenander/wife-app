@@ -66,13 +66,13 @@ export function parseViewKey(viewKey: string): TaskViewKey | null {
 }
 
 export function reorderTasksById<T extends { _id: string }>(
-  tasks: T[],
-  orderedIds: string[],
-): T[] {
+  tasks: Array<T>,
+  orderedIds: Array<string>,
+): Array<T> {
   if (tasks.length === 0) return tasks
   const byId = new Map(tasks.map((task) => [task._id, task]))
   const seen = new Set<string>()
-  const ordered: T[] = []
+  const ordered: Array<T> = []
   for (const id of orderedIds) {
     const task = byId.get(id)
     if (task) {

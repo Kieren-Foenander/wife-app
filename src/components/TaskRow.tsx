@@ -1,10 +1,10 @@
-import type React from 'react'
 import { Link } from '@tanstack/react-router'
 import { GripVertical, Pencil, Trash2 } from 'lucide-react'
+import { Button } from './ui/button'
+import type React from 'react'
 
 import type { Id } from '../../convex/_generated/dataModel'
 import type { TaskFrequency } from './CreationDrawer'
-import { Button } from './ui/button'
 
 export function TaskRow({
   task,

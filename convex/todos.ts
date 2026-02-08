@@ -41,8 +41,8 @@ function buildChildrenRecurringViewKey(parentTaskId: string): string {
 async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
   ctx: QueryCtx,
   viewKey: string | undefined,
-  tasks: T[],
-): Promise<T[]> {
+  tasks: Array<T>,
+): Promise<Array<T>> {
   if (!viewKey || tasks.length === 0) return tasks
   const orderRows = await ctx.db
     .query('taskOrders')

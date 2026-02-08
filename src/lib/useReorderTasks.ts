@@ -1,8 +1,8 @@
 import { useMutation } from 'convex/react'
 
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
 import { parseViewKey, reorderTasksById } from './taskOrder'
+import type { Id } from '../../convex/_generated/dataModel'
 
 export function useReorderTasks() {
   return useMutation(api.todos.reorderTasks).withOptimisticUpdate(
@@ -86,17 +86,15 @@ export function useReorderTasks() {
         }
         return
       }
-      if (parsed.kind === 'all') {
-        const existing = localStore.getQuery(api.todos.listTasks, {
-          viewKey: args.viewKey,
-        })
-        if (existing !== undefined) {
-          localStore.setQuery(
-            api.todos.listTasks,
-            { viewKey: args.viewKey },
-            reorderTasksById(existing, args.taskIds),
-          )
-        }
+      const existing = localStore.getQuery(api.todos.listTasks, {
+        viewKey: args.viewKey,
+      })
+      if (existing !== undefined) {
+        localStore.setQuery(
+          api.todos.listTasks,
+          { viewKey: args.viewKey },
+          reorderTasksById(existing, args.taskIds),
+        )
       }
     },
   )
