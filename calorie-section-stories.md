@@ -75,7 +75,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 1.2** — Progress ring visualization
+- [x] **Story 1.2** — Progress ring visualization
 
 As a user, I want a progress ring so I can see progress at a glance.
 
