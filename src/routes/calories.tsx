@@ -110,6 +110,8 @@ type AccurateEstimate = {
   items: Array<AccurateEstimateItem>
   assumptions: Array<string>
   notes: Array<string>
+  totalGrams: number
+  defaultServingGrams: number
 }
 
 type FollowUpQuestion = {
@@ -336,6 +338,23 @@ function parseQuantity(raw: string): number | null {
   return Number.isFinite(value) ? value : null
 }
 
+function getDefaultServingGrams({
+  totalGrams,
+  servingsCount,
+}: {
+  totalGrams: number
+  servingsCount?: number | null
+}): number {
+  if (!Number.isFinite(totalGrams) || totalGrams <= 0) {
+    return ROUGH_DEFAULT_SERVING_GRAMS
+  }
+  if (servingsCount && servingsCount > 0) {
+    const perServing = totalGrams / servingsCount
+    return Number.isFinite(perServing) && perServing > 0 ? perServing : totalGrams
+  }
+  return totalGrams
+}
+
 function normalizeUnit(raw: string | undefined): string | null {
   if (!raw) return null
   const normalized = raw.toLowerCase()
@@ -503,7 +522,10 @@ function getAccurateFollowUpQuestions(input: string): Array<FollowUpQuestion> {
   return questions.slice(0, ACCURATE_FOLLOWUP_LIMIT)
 }
 
-function getAccurateEstimate(input: string): AccurateEstimate {
+function getAccurateEstimate(
+  input: string,
+  servingsCount?: number | null,
+): AccurateEstimate {
   const lines = input
     .split(/[\n,]+/)
     .map((line) => line.trim())
@@ -531,12 +553,13 @@ function getAccurateEstimate(input: string): AccurateEstimate {
 
   if (items.length === 0) {
     const fallback = getRoughEstimate(input)
+    const totalGrams = ROUGH_DEFAULT_SERVING_GRAMS
     return {
       calories: fallback.calories,
       items: [
         {
           name: fallback.label,
-          grams: ROUGH_DEFAULT_SERVING_GRAMS,
+          grams: totalGrams,
           calories: fallback.calories,
           caloriesPer100g: Math.round((fallback.calories / ROUGH_DEFAULT_SERVING_GRAMS) * 100),
           source: 'defaulted',
@@ -547,15 +570,20 @@ function getAccurateEstimate(input: string): AccurateEstimate {
         'No ingredients parsed; used a quick estimate instead.',
       ],
       notes: [...fallback.notes],
+      totalGrams,
+      defaultServingGrams: getDefaultServingGrams({ totalGrams, servingsCount }),
     }
   }
 
   const calories = items.reduce((sum, item) => sum + item.calories, 0)
+  const totalGrams = items.reduce((sum, item) => sum + item.grams, 0)
   return {
     calories,
     items,
     assumptions,
     notes,
+    totalGrams,
+    defaultServingGrams: getDefaultServingGrams({ totalGrams, servingsCount }),
   }
 }
 
@@ -762,6 +790,7 @@ function CaloriesHome() {
   const [accurateEstimate, setAccurateEstimate] = useState<AccurateEstimate | null>(
     null,
   )
+  const [accurateServingGramsInput, setAccurateServingGramsInput] = useState('')
   const [accurateQuestions, setAccurateQuestions] = useState<Array<FollowUpQuestion>>(
     [],
   )
@@ -858,7 +887,12 @@ function CaloriesHome() {
     setAccurateStep('result')
   }
   const handleAccurateFinalize = () => {
-    const estimate = getAccurateEstimate(addNewText)
+    const servingsAnswer = accurateAnswers.servings
+    const servingsCount =
+      servingsAnswer && servingsAnswer !== ACCURATE_SKIPPED_ANSWER
+        ? parseQuantity(servingsAnswer)
+        : null
+    const estimate = getAccurateEstimate(addNewText, servingsCount)
     const followUpNotes = accurateQuestions.map((question) => {
       const answer = accurateAnswers[question.id]
       if (!answer || answer === ACCURATE_SKIPPED_ANSWER) {
@@ -886,6 +920,7 @@ function CaloriesHome() {
       setAccurateQuestions([])
       setAccurateAnswers({})
       setAccurateStep(null)
+      setAccurateServingGramsInput('')
     }
   }
 
@@ -909,12 +944,25 @@ function CaloriesHome() {
     setAccurateQuestions([])
     setAccurateAnswers({})
     setAccurateStep(null)
+    setAccurateServingGramsInput('')
   }, [addNewText])
 
   useEffect(() => {
     if (!roughEstimate) return
     setRoughGramsInput('')
   }, [roughEstimate])
+
+  useEffect(() => {
+    if (!accurateEstimate) {
+      setAccurateServingGramsInput('')
+      return
+    }
+    setAccurateServingGramsInput(
+      accurateEstimate.defaultServingGrams
+        ? String(Math.round(accurateEstimate.defaultServingGrams))
+        : '',
+    )
+  }, [accurateEstimate])
 
   const parsedGrams = Number(gramsInput)
   const grams = Number.isFinite(parsedGrams) ? parsedGrams : 0
@@ -938,6 +986,19 @@ function CaloriesHome() {
         : roughEstimate.calories
   const canLogRough =
     roughEstimate != null && roughCalories > 0 && !Number.isNaN(roughCalories)
+  const parsedAccurateServingGrams = Number(accurateServingGramsInput)
+  const accurateServingGrams =
+    accurateEstimate == null
+      ? 0
+      : Number.isFinite(parsedAccurateServingGrams) && parsedAccurateServingGrams > 0
+        ? parsedAccurateServingGrams
+        : accurateEstimate.defaultServingGrams
+  const accurateCaloriesPerGram =
+    accurateEstimate && accurateEstimate.totalGrams > 0
+      ? accurateEstimate.calories / accurateEstimate.totalGrams
+      : 0
+  const accurateServingCalories =
+    accurateEstimate == null ? 0 : accurateServingGrams * accurateCaloriesPerGram
   const handleLogRecipe = async () => {
     if (!selectedRecipe) return
     if (!canLog) {
@@ -1462,6 +1523,37 @@ function CaloriesHome() {
                         </span>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 rounded-xl border border-border/70 bg-background/70 p-3">
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                      Default serving
+                    </p>
+                    <label
+                      htmlFor="accurate-serving-grams"
+                      className="mt-2 block text-sm font-medium text-muted-foreground"
+                    >
+                      Serving size (grams)
+                    </label>
+                    <input
+                      id="accurate-serving-grams"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="decimal"
+                      value={accurateServingGramsInput}
+                      onChange={(e) => setAccurateServingGramsInput(e.target.value)}
+                      placeholder="Enter grams per serving"
+                      className="mt-2 h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                    />
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                      <span>Calories for this serving</span>
+                      <span className="text-base font-semibold text-foreground">
+                        {formatCalories(accurateServingCalories)} kcal
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Adjust before saving or logging.
+                    </p>
                   </div>
                   <details className="mt-4">
                     <summary className="cursor-pointer text-sm font-medium text-foreground">

@@ -311,7 +311,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 4.3** — Accurate mode generates default serving grams
+- [x] **Story 4.3** — Accurate mode generates default serving grams
 
 As a user, I want a default serving size in grams so recipes are reusable.
 
