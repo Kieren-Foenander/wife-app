@@ -3,9 +3,9 @@ import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { mutation, query } from './_generated/server'
 
-const SETTINGS_KIND = 'global'
-const DEFAULT_NORMAL_GOAL = 1800
-const DEFAULT_MAINTENANCE_GOAL = 2000
+export const SETTINGS_KIND = 'global'
+export const DEFAULT_NORMAL_GOAL = 1800
+export const DEFAULT_MAINTENANCE_GOAL = 2000
 
 type Settings = {
   normalGoal: number
@@ -14,7 +14,7 @@ type Settings = {
   resetWeekEndMs?: number
 }
 
-async function getSettings(ctx: QueryCtx): Promise<Settings> {
+export async function getSettings(ctx: QueryCtx): Promise<Settings> {
   const existing = await ctx.db
     .query('userSettings')
     .withIndex('byKind', (q) => q.eq('kind', SETTINGS_KIND))
@@ -51,15 +51,31 @@ async function getOrCreateSettings(
   return (await ctx.db.get(id)) as Doc<'userSettings'>
 }
 
-function isResetWeekForDate(
+export function isResetWeekForDate(
   dayStartMs: number,
   settings: Settings,
 ): boolean {
-  const start = settings.resetWeekStartMs
+const start = settings.resetWeekStartMs
   if (start == null) return false
   const end = settings.resetWeekEndMs
   if (end == null) return dayStartMs >= start
   return dayStartMs >= start && dayStartMs <= end
+}
+
+export async function getGoalForDateInternal(
+  ctx: QueryCtx,
+  dayStartMs: number,
+): Promise<{ goal: number; mode: 'maintenance' | 'normal'; resetWeekActive: boolean }> {
+  const settings = await getSettings(ctx)
+  const resetWeekActive = isResetWeekForDate(dayStartMs, settings)
+  const goal = resetWeekActive
+    ? settings.maintenanceGoal
+    : settings.normalGoal
+  return {
+    goal,
+    mode: resetWeekActive ? 'maintenance' : 'normal',
+    resetWeekActive,
+  }
 }
 
 export const getCalorieSettings = query({
@@ -72,16 +88,7 @@ export const getCalorieSettings = query({
 export const getGoalForDate = query({
   args: { dayStartMs: v.number() },
   handler: async (ctx, args) => {
-    const settings = await getSettings(ctx)
-    const resetWeekActive = isResetWeekForDate(args.dayStartMs, settings)
-    const goal = resetWeekActive
-      ? settings.maintenanceGoal
-      : settings.normalGoal
-    return {
-      goal,
-      mode: resetWeekActive ? 'maintenance' : 'normal',
-      resetWeekActive,
-    }
+    return await getGoalForDateInternal(ctx, args.dayStartMs)
   },
 })
 

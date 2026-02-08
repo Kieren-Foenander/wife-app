@@ -41,4 +41,14 @@ export default defineSchema({
     resetWeekStartMs: v.optional(v.number()),
     resetWeekEndMs: v.optional(v.number()),
   }).index('byKind', ['kind']),
+  calorieEntries: defineTable({
+    dayStartMs: v.number(),
+    timestampMs: v.number(),
+    label: v.string(),
+    calories: v.number(),
+    grams: v.optional(v.number()),
+    servings: v.optional(v.number()),
+  })
+    .index('byDayStartMs', ['dayStartMs'])
+    .index('byDayStartMsTimestamp', ['dayStartMs', 'timestampMs']),
 })

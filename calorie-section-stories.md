@@ -24,7 +24,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 0.2** — Compute daily totals + remaining calories
+- [x] **Story 0.2** — Compute daily totals + remaining calories
 
 As a user, I want the app to compute total consumed and remaining calories per day.
 
