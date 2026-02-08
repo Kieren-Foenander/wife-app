@@ -181,7 +181,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 2.3** — Add flow supports adding to a specific date (today or selected day)
+- [x] **Story 2.3** — Add flow supports adding to a specific date (today or selected day)
 
 **Codebase:** Target date = URL `?date=YYYY-MM-DD` (use `fromYYYYMMDD` / `toYYYYMMDDUTC` from `src/lib/dateUtils.ts`). No date = today. Same pattern as Tasks day selection.
 

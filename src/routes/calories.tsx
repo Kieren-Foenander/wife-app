@@ -301,6 +301,15 @@ function CaloriesHome() {
   })
   const isSelectedToday =
     dayStartMs === startOfDayUTCFromDate(new Date())
+  const addContextLabel = isSelectedToday
+    ? 'Today'
+    : selectedDate.toLocaleDateString('en-US', {
+        timeZone: APP_TIME_ZONE,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
   const entriesTitle = isSelectedToday ? "Today's entries" : 'Entries'
   const handleAddClick = () => {
     setDrawerOpen(true)
@@ -549,9 +558,14 @@ function CaloriesHome() {
         >
           <DrawerHeader>
             <div className="flex items-center justify-between gap-3">
-              <DrawerTitle className="text-foreground">
-                {selectedRecipe ? 'Confirm entry' : 'Add entry'}
-              </DrawerTitle>
+              <div>
+                <DrawerTitle className="text-foreground">
+                  {selectedRecipe ? 'Confirm entry' : 'Add entry'}
+                </DrawerTitle>
+                <p className="mt-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  Logging for {addContextLabel}
+                </p>
+              </div>
               {selectedRecipe ? (
                 <Button
                   type="button"
