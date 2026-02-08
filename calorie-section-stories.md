@@ -266,7 +266,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 3.5** — One-tap Confirm & Log
+- [x] **Story 3.5** — One-tap Confirm & Log
 
 As a user, I want to log with one tap once I see the estimate.
 

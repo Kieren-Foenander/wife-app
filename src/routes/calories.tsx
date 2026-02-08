@@ -541,6 +541,8 @@ function CaloriesHome() {
       : roughGrams > 0
         ? roughEstimate.calories * (roughGrams / ROUGH_DEFAULT_SERVING_GRAMS)
         : roughEstimate.calories
+  const canLogRough =
+    roughEstimate != null && roughCalories > 0 && !Number.isNaN(roughCalories)
   const handleLogRecipe = async () => {
     if (!selectedRecipe) return
     if (!canLog) {
@@ -554,6 +556,24 @@ function CaloriesHome() {
       grams,
     })
     toast('Recipe logged.')
+    handleDrawerChange(false)
+  }
+
+  const handleLogRough = async () => {
+    if (!roughEstimate) return
+    if (!canLogRough) {
+      toast('Add a rough estimate before logging.')
+      return
+    }
+    const trimmedLabel = addNewText.trim()
+    await createEntry({
+      dayStartMs,
+      label: trimmedLabel || roughEstimate.label,
+      calories: Math.round(roughCalories),
+      grams: roughGrams > 0 ? roughGrams : undefined,
+      servings: roughGrams > 0 ? undefined : 1,
+    })
+    toast('Entry logged.')
     handleDrawerChange(false)
   }
 
@@ -1062,7 +1082,13 @@ function CaloriesHome() {
               <Button type="button" onClick={handleLogRecipe} disabled={!canLog}>
                 Log
               </Button>
-            ) : isAddNew ? null : (
+            ) : isAddNew ? (
+              roughEstimate ? (
+                <Button type="button" onClick={handleLogRough} disabled={!canLogRough}>
+                  Log
+                </Button>
+              ) : null
+            ) : (
               <Button type="button" onClick={handleAddNew}>
                 Add new
               </Button>
