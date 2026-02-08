@@ -11,6 +11,7 @@ type AccurateQuestionsCardProps = {
   onSkipQuestion: (id: string) => void
   onSkipAll: () => void
   onFinalize: () => void
+  isLoading: boolean
 }
 
 export function AccurateQuestionsCard({
@@ -20,6 +21,7 @@ export function AccurateQuestionsCard({
   onSkipQuestion,
   onSkipAll,
   onFinalize,
+  isLoading,
 }: AccurateQuestionsCardProps) {
   return (
     <div className="rounded-2xl border border-border bg-card/70 p-4">
@@ -37,6 +39,7 @@ export function AccurateQuestionsCard({
           variant="ghost"
           className="h-auto px-0 text-xs text-muted-foreground"
           onClick={onSkipAll}
+          disabled={isLoading}
         >
           Use best guess
         </Button>
@@ -59,7 +62,7 @@ export function AccurateQuestionsCard({
                   value={isSkipped ? '' : answer ?? ''}
                   onChange={(e) => onAnswerChange(question.id, e.target.value)}
                   placeholder={question.placeholder}
-                  disabled={isSkipped}
+                  disabled={isSkipped || isLoading}
                   className="mt-2 h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none disabled:opacity-70"
                 />
               ) : question.options ? (
@@ -72,7 +75,7 @@ export function AccurateQuestionsCard({
                         type="button"
                         variant={isSelected ? 'secondary' : 'ghost'}
                         className="h-8 px-3 text-xs"
-                        disabled={isSkipped}
+                        disabled={isSkipped || isLoading}
                         onClick={() => onAnswerChange(question.id, option)}
                       >
                         {option}
@@ -87,7 +90,7 @@ export function AccurateQuestionsCard({
                   variant="ghost"
                   className="h-auto px-0 text-xs text-muted-foreground"
                   onClick={() => onSkipQuestion(question.id)}
-                  disabled={isSkipped}
+                  disabled={isSkipped || isLoading}
                 >
                   Skip / Use best guess
                 </Button>
@@ -103,8 +106,9 @@ export function AccurateQuestionsCard({
         type="button"
         className="mt-4 w-full"
         onClick={onFinalize}
+        disabled={isLoading}
       >
-        Get estimate
+        {isLoading ? 'Updating...' : 'Get estimate'}
       </Button>
     </div>
   )

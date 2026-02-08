@@ -52,6 +52,7 @@ function CaloriesHome() {
     endDayMs: weightRangeEnd,
   }) as Array<WeightEntry> | undefined
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editEntry, setEditEntry] = useState<CalorieEntry | null>(null)
   const isSelectedToday = dayStartMs === startOfDayUTCFromDate(new Date())
   const addContextLabel = isSelectedToday
     ? 'Today'
@@ -84,14 +85,27 @@ function CaloriesHome() {
         <EntriesSection
           entries={entries}
           title={entriesTitle}
-          onAddClick={() => setDrawerOpen(true)}
+          onAddClick={() => {
+            setEditEntry(null)
+            setDrawerOpen(true)
+          }}
+          onEditEntry={(entry) => {
+            setEditEntry(entry)
+            setDrawerOpen(true)
+          }}
         />
       </main>
       <CaloriesDrawer
         open={drawerOpen}
-        onOpenChange={setDrawerOpen}
+        onOpenChange={(nextOpen) => {
+          setDrawerOpen(nextOpen)
+          if (!nextOpen) {
+            setEditEntry(null)
+          }
+        }}
         dayStartMs={dayStartMs}
         addContextLabel={addContextLabel}
+        editEntry={editEntry}
       />
       <BottomNav active="calories" />
     </div>

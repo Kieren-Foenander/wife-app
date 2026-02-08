@@ -4,12 +4,14 @@ import {
   formatTime,
   type CalorieEntry,
 } from '@/lib/caloriesUtils'
+import { Button } from '../ui/button'
 
 type EntryRowProps = {
   entry: CalorieEntry
+  onEdit?: (entry: CalorieEntry) => void
 }
 
-export function EntryRow({ entry }: EntryRowProps) {
+export function EntryRow({ entry, onEdit }: EntryRowProps) {
   const portionLabel = formatPortion(entry)
 
   return (
@@ -22,10 +24,20 @@ export function EntryRow({ entry }: EntryRowProps) {
           <span>{portionLabel}</span>
         </div>
       </div>
-      <div className="text-right">
+      <div className="flex flex-col items-end gap-2 text-right">
         <p className="text-base font-semibold text-foreground">
           {formatCalories(entry.calories)} kcal
         </p>
+        {onEdit ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => onEdit(entry)}
+          >
+            Edit
+          </Button>
+        ) : null}
       </div>
     </li>
   )

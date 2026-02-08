@@ -7,6 +7,8 @@ type DrawerFooterActionsProps = {
   canLogRecipe: boolean
   canLogEstimate: boolean
   hasEstimate: boolean
+  isLoading: boolean
+  isEditMode: boolean
   onLogRecipe: () => void
   onLogEstimate: () => void
   onAddNew: () => void
@@ -18,14 +20,23 @@ export function DrawerFooterActions({
   canLogRecipe,
   canLogEstimate,
   hasEstimate,
+  isLoading,
+  isEditMode,
   onLogRecipe,
   onLogEstimate,
   onAddNew,
 }: DrawerFooterActionsProps) {
+  if (isEditMode) {
+    return null
+  }
   if (selectedRecipe) {
     return (
-      <Button type="button" onClick={onLogRecipe} disabled={!canLogRecipe}>
-        Log
+      <Button
+        type="button"
+        onClick={onLogRecipe}
+        disabled={!canLogRecipe || isLoading}
+      >
+        {isLoading ? 'Logging...' : 'Log'}
       </Button>
     )
   }
@@ -33,8 +44,12 @@ export function DrawerFooterActions({
   if (isAddNew) {
     if (hasEstimate) {
       return (
-        <Button type="button" onClick={onLogEstimate} disabled={!canLogEstimate}>
-          Log
+        <Button
+          type="button"
+          onClick={onLogEstimate}
+          disabled={!canLogEstimate || isLoading}
+        >
+          {isLoading ? 'Logging...' : 'Log'}
         </Button>
       )
     }
@@ -43,7 +58,7 @@ export function DrawerFooterActions({
   }
 
   return (
-    <Button type="button" onClick={onAddNew}>
+    <Button type="button" onClick={onAddNew} disabled={isLoading}>
       Add new
     </Button>
   )

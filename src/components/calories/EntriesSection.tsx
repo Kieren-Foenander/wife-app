@@ -9,12 +9,14 @@ type EntriesSectionProps = {
   entries: Array<CalorieEntry> | undefined
   title: string
   onAddClick: () => void
+  onEditEntry: (entry: CalorieEntry) => void
 }
 
 export function EntriesSection({
   entries,
   title,
   onAddClick,
+  onEditEntry,
 }: EntriesSectionProps) {
   return (
     <section className="space-y-3">
@@ -69,7 +71,7 @@ export function EntriesSection({
         ) : (
           <ul className="space-y-3">
             {entries.map((entry) => (
-              <EntryRow key={entry._id} entry={entry} />
+              <EntryRow key={entry._id} entry={entry} onEdit={onEditEntry} />
             ))}
           </ul>
         )}

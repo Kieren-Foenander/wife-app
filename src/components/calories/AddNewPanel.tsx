@@ -1,4 +1,5 @@
 import { Button } from '../ui/button'
+import { Spinner } from '../ui/spinner'
 import { type AgentEstimate, type FollowUpQuestion } from '@/lib/caloriesUtils'
 import { AccurateQuestionsCard } from './AccurateQuestionsCard'
 import { AgentEstimateCard } from './AgentEstimateCard'
@@ -20,6 +21,7 @@ type AddNewPanelProps = {
   onPortionChange: (value: string) => void
   portionCalories: number
   portionKind: 'grams' | 'servings'
+  estimateStatus: 'idle' | 'estimating' | 'answering' | 'logging'
 }
 
 export function AddNewPanel({
@@ -39,7 +41,17 @@ export function AddNewPanel({
   onPortionChange,
   portionCalories,
   portionKind,
+  estimateStatus,
 }: AddNewPanelProps) {
+  const isEstimating = estimateStatus === 'estimating'
+  const isAnswering = estimateStatus === 'answering'
+  const isLoading = isEstimating || isAnswering
+  const statusLabel = isEstimating
+    ? 'Estimating calories...'
+    : isAnswering
+      ? 'Updating estimate...'
+      : null
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-4">
       <div className="rounded-2xl border border-border bg-card/70 p-4">
@@ -65,11 +77,17 @@ export function AddNewPanel({
         <Button
           type="button"
           onClick={onRunEstimate}
-          disabled={!canRunAddNew}
+          disabled={!canRunAddNew || isLoading}
         >
-          Get estimate
+          {isEstimating ? 'Estimating...' : 'Get estimate'}
         </Button>
       </div>
+      {statusLabel ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Spinner aria-label={statusLabel} size={16} />
+          <span>{statusLabel}</span>
+        </div>
+      ) : null}
       {estimateStep === 'questions' && questions.length > 0 ? (
         <AccurateQuestionsCard
           questions={questions}
@@ -78,6 +96,7 @@ export function AddNewPanel({
           onSkipQuestion={onSkipQuestion}
           onSkipAll={onSkipAll}
           onFinalize={onFinalize}
+          isLoading={isLoading}
         />
       ) : null}
       {estimate ? (

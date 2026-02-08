@@ -5,6 +5,7 @@ import { type Recipe } from '@/lib/caloriesUtils'
 type DrawerHeaderContentProps = {
   selectedRecipe: Recipe | null
   isAddNew: boolean
+  isEditMode: boolean
   addContextLabel: string
   onBackToList: () => void
 }
@@ -12,20 +13,30 @@ type DrawerHeaderContentProps = {
 export function DrawerHeaderContent({
   selectedRecipe,
   isAddNew,
+  isEditMode,
   addContextLabel,
   onBackToList,
 }: DrawerHeaderContentProps) {
+  const title = selectedRecipe
+    ? 'Confirm entry'
+    : isEditMode
+      ? 'Edit entry'
+      : isAddNew
+        ? 'Add new'
+        : 'Add entry'
+  const showBack = selectedRecipe || isAddNew || isEditMode
+
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
         <DrawerTitle className="text-foreground">
-          {selectedRecipe ? 'Confirm entry' : isAddNew ? 'Add new' : 'Add entry'}
+          {title}
         </DrawerTitle>
         <p className="mt-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
           Logging for {addContextLabel}
         </p>
       </div>
-      {selectedRecipe || isAddNew ? (
+      {showBack ? (
         <Button
           type="button"
           variant="ghost"

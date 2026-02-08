@@ -1,7 +1,11 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
 import { components } from './_generated/api'
-import { Agent, createTool, createThread } from '@convex-dev/agent'
+import {
+  Agent,
+  createTool,
+  createThread,
+} from '@convex-dev/agent'
 import { openai } from '@ai-sdk/openai'
 import { type LanguageModel, stepCountIs } from 'ai'
 import { z } from 'zod'
@@ -114,10 +118,13 @@ function formatPrompt({
     .join('\n')
 }
 
-function getEstimateResult(result: {
-  toolResults: Array<{ output: unknown }>
+async function getEstimateResult(result: {
+  toolResults:
+    | Array<{ output: unknown }>
+    | Promise<Array<{ output: unknown }>>
 }) {
-  const toolResult = result.toolResults[0]?.output
+  const toolResults = await result.toolResults
+  const toolResult = toolResults[0]?.output
   if (!toolResult) {
     throw new Error('No tool result returned from calorie agent')
   }
@@ -128,17 +135,18 @@ export const startEstimate = action({
   args: { input: v.string() },
   handler: async (ctx, args) => {
     const threadId = await createThread(ctx, components.agent)
+    const prompt = formatPrompt({ input: args.input })
     const result = await calorieAgent.generateText(
       ctx,
       { threadId },
       {
-        prompt: formatPrompt({ input: args.input }),
-        toolChoice: { type: 'tool', toolName: 'emitCalorieEstimate' },
+        prompt,
       },
     )
     return {
       threadId,
-      estimate: getEstimateResult(result) as z.infer<typeof estimateSchema>,
+      estimate:
+        (await getEstimateResult(result)) as z.infer<typeof estimateSchema>,
     }
   },
 })
@@ -150,17 +158,18 @@ export const answerQuestions = action({
     answers: v.record(v.string(), v.string()),
   },
   handler: async (ctx, args) => {
+    const prompt = formatPrompt({ input: args.input, answers: args.answers })
     const result = await calorieAgent.generateText(
       ctx,
       { threadId: args.threadId },
       {
-        prompt: formatPrompt({ input: args.input, answers: args.answers }),
-        toolChoice: { type: 'tool', toolName: 'emitCalorieEstimate' },
+        prompt,
       },
     )
     return {
       threadId: args.threadId,
-      estimate: getEstimateResult(result) as z.infer<typeof estimateSchema>,
+      estimate:
+        (await getEstimateResult(result)) as z.infer<typeof estimateSchema>,
     }
   },
 })
