@@ -1,7 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
+import { Utensils } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { BottomNav } from '../components/BottomNav'
+import { Button } from '../components/ui/button'
+import { ListRowSkeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import {
   APP_TIME_ZONE,
@@ -29,6 +33,30 @@ function formatCalories(value: number): string {
   return new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0,
   }).format(Math.round(value))
+}
+
+function formatNumber(value: number, maximumFractionDigits = 0): string {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits }).format(value)
+}
+
+function formatTime(timestampMs: number): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestampMs))
+}
+
+function formatPortion(entry: { grams?: number; servings?: number }): string {
+  if (entry.grams != null) {
+    return `${formatNumber(entry.grams)} g`
+  }
+  if (entry.servings != null) {
+    const servingsLabel = formatNumber(entry.servings, 2)
+    const suffix = entry.servings === 1 ? 'serving' : 'servings'
+    return `${servingsLabel} ${suffix}`
+  }
+  return 'Portion not set'
 }
 
 function ProgressRing({
@@ -107,8 +135,16 @@ function CaloriesHome() {
     : fromYYYYMMDD(toYYYYMMDDUTC(new Date()))
   const dayStartMs = startOfDayUTCFromDate(selectedDate)
   const totals = useQuery(api.calorieEntries.getDayTotals, { dayStartMs })
+  const entries = useQuery(api.calorieEntries.listEntriesForDay, {
+    dayStartMs,
+    order: 'desc',
+  })
   const isSelectedToday =
     dayStartMs === startOfDayUTCFromDate(new Date())
+  const entriesTitle = isSelectedToday ? "Today's entries" : 'Entries'
+  const handleAddClick = () => {
+    toast('Add flow coming soon.')
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -172,6 +208,89 @@ function CaloriesHome() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Utensils
+                className="size-5 shrink-0 text-muted-foreground"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+              {entriesTitle}
+            </h2>
+            <Button type="button" onClick={handleAddClick}>
+              + Add
+            </Button>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 p-6">
+            {entries === undefined ? (
+              <div
+                className="flex flex-col items-center gap-4 py-8"
+                role="status"
+                aria-label="Loading entries"
+              >
+                <Spinner aria-label="Loading entries" size={24} />
+                <p className="text-sm text-muted-foreground">
+                  Loading entries...
+                </p>
+                <ul className="w-full space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <ListRowSkeleton key={i} />
+                  ))}
+                </ul>
+              </div>
+            ) : entries.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center gap-3 py-10 text-center"
+                role="status"
+                aria-label="No entries"
+              >
+                <Utensils
+                  className="size-12 text-muted-foreground"
+                  strokeWidth={1.25}
+                  aria-hidden
+                />
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-foreground">
+                    No entries yet
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Tap + Add to log your first meal.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {entries.map((entry) => {
+                  const portionLabel = formatPortion(entry)
+                  return (
+                    <li
+                      key={entry._id}
+                      className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-base font-medium text-foreground">
+                          {entry.label}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>{formatTime(entry.timestampMs)}</span>
+                          <span aria-hidden="true">•</span>
+                          <span>{portionLabel}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-base font-semibold text-foreground">
+                          {formatCalories(entry.calories)} kcal
+                        </p>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
         </section>
       </main>
       <BottomNav active="calories" />

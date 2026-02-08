@@ -89,7 +89,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 1.3** — Today entries list on Home
+- [x] **Story 1.3** — Today entries list on Home
 
 As a user, I want to see today’s logged items so I can confirm I’ve tracked everything.
 
