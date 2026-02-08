@@ -122,7 +122,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 1.5** — Reset week indicator + streak paused indicator
+- [x] **Story 1.5** — Reset week indicator + streak paused indicator
 
 As a user, I want to know when reset week is active and that my streak is paused.
 

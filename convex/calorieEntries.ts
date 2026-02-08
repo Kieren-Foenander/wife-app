@@ -36,11 +36,15 @@ export const getDayTotals = query({
       .withIndex('byDayStartMs', (q) => q.eq('dayStartMs', dayStartMs))
       .collect()
     const consumed = entries.reduce((sum, entry) => sum + entry.calories, 0)
-    const { goal } = await getGoalForDateInternal(ctx, dayStartMs)
+    const { goal, resetWeekActive } = await getGoalForDateInternal(
+      ctx,
+      dayStartMs,
+    )
     return {
       consumed,
       goal,
       remaining: goal - consumed,
+      resetWeekActive,
     }
   },
 })

@@ -327,6 +327,14 @@ function CaloriesHome() {
                 </span>
                 <span>Goal: {formatCalories(totals.goal)} kcal</span>
               </div>
+              {totals.resetWeekActive ? (
+                <div className="rounded-xl border border-dashed border-primary/40 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                  <p className="font-medium">Reset week active</p>
+                  <p className="text-xs text-muted-foreground">
+                    Streak paused while you focus on maintenance.
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
         </section>
