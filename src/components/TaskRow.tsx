@@ -69,7 +69,7 @@ export function TaskRow({
       className={mergedClassName}
       style={mergedStyle}
     >
-      <label className="flex flex-1 items-center gap-3">
+      <div className="flex flex-1 items-center gap-3">
         <input
           type="checkbox"
           className="h-6 w-6 rounded-full border-2 border-input bg-background text-foreground accent-primary appearance-none checked:bg-primary checked:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -89,7 +89,7 @@ export function TaskRow({
         >
           {task.title}
         </Link>
-      </label>
+      </div>
       {showSubtaskCompletion ? (
         <span className="rounded-full border border-border bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
           {subtaskCompletion.completed}/{subtaskCompletion.total} subtasks
