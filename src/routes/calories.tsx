@@ -97,6 +97,8 @@ type RoughEstimate = {
   notes: Array<string>
 }
 
+const ROUGH_DEFAULT_SERVING_GRAMS = 100
+
 const ROUGH_ESTIMATE_RULES: Array<{
   label: string
   minCalories: number
@@ -433,6 +435,7 @@ function CaloriesHome() {
   const [drawerMode, setDrawerMode] = useState<'list' | 'addNew'>('list')
   const [addNewText, setAddNewText] = useState('')
   const [roughEstimate, setRoughEstimate] = useState<RoughEstimate | null>(null)
+  const [roughGramsInput, setRoughGramsInput] = useState('')
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -495,6 +498,7 @@ function CaloriesHome() {
       setDrawerMode('list')
       setAddNewText('')
       setRoughEstimate(null)
+      setRoughGramsInput('')
     }
   }
 
@@ -512,6 +516,11 @@ function CaloriesHome() {
     setRoughEstimate(null)
   }, [addNewText])
 
+  useEffect(() => {
+    if (!roughEstimate) return
+    setRoughGramsInput('')
+  }, [roughEstimate])
+
   const parsedGrams = Number(gramsInput)
   const grams = Number.isFinite(parsedGrams) ? parsedGrams : 0
   const computedCalories = selectedRecipe
@@ -524,6 +533,14 @@ function CaloriesHome() {
   const canLog =
     !!selectedRecipe && grams > 0 && computedCalories > 0 && !Number.isNaN(grams)
   const canRunAddNew = addNewText.trim().length > 0
+  const parsedRoughGrams = Number(roughGramsInput)
+  const roughGrams = Number.isFinite(parsedRoughGrams) ? parsedRoughGrams : 0
+  const roughCalories =
+    roughEstimate == null
+      ? 0
+      : roughGrams > 0
+        ? roughEstimate.calories * (roughGrams / ROUGH_DEFAULT_SERVING_GRAMS)
+        : roughEstimate.calories
   const handleLogRecipe = async () => {
     if (!selectedRecipe) return
     if (!canLog) {
@@ -904,6 +921,43 @@ function CaloriesHome() {
                       </div>
                     </div>
                   </details>
+                </div>
+              ) : null}
+              {roughEstimate ? (
+                <div className="rounded-2xl border border-border bg-card/70 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                    Confirm portion
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <span>Default portion</span>
+                    <span className="text-foreground">1 serving</span>
+                  </div>
+                  <label
+                    htmlFor="rough-grams"
+                    className="mt-4 block text-sm font-medium text-muted-foreground"
+                  >
+                    Optional grams override
+                  </label>
+                  <input
+                    id="rough-grams"
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="decimal"
+                    value={roughGramsInput}
+                    onChange={(e) => setRoughGramsInput(e.target.value)}
+                    placeholder="Enter grams if you weighed it"
+                    className="mt-2 h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Calories scale assuming 100g per serving.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <span>Calories for this entry</span>
+                    <span className="text-base font-semibold text-foreground">
+                      {formatCalories(roughCalories)} kcal
+                    </span>
+                  </div>
                 </div>
               ) : null}
             </div>

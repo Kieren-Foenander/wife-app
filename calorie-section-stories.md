@@ -247,7 +247,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 3.4** — Rough confirm defaults to 1 serving, optional grams override
+- [x] **Story 3.4** — Rough confirm defaults to 1 serving, optional grams override
 
 As a user, I want rough logging to be quick, but still allow grams if I have time.
 
