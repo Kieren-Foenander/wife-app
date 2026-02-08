@@ -232,7 +232,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 3.3** — Rough estimate shows “Details” assumptions
+- [x] **Story 3.3** — Rough estimate shows “Details” assumptions
 
 As a user, I want to see assumptions if I care about accuracy.
 

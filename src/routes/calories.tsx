@@ -93,6 +93,8 @@ type RoughEstimate = {
   calories: number
   label: string
   basis: 'matched' | 'fallback'
+  assumptions: Array<string>
+  notes: Array<string>
 }
 
 const ROUGH_ESTIMATE_RULES: Array<{
@@ -201,10 +203,19 @@ function getRoughEstimate(input: string): RoughEstimate {
       matchedRules.length === 1
         ? matchedRules[0].label
         : `${matchedRules[0].label} + more`
+    const matchedLabels = matchedRules.map((rule) => rule.label).join(', ')
     return {
       calories: estimate,
       label: primaryLabel,
       basis: 'matched',
+      assumptions: [
+        'Estimated using quick meal ranges.',
+        'Assumed 1 serving (standard portion).',
+      ],
+      notes: [
+        `Matched categories: ${matchedLabels}.`,
+        'Inferred portion: 1 serving.',
+      ],
     }
   }
 
@@ -215,6 +226,11 @@ function getRoughEstimate(input: string): RoughEstimate {
     calories: fallbackEstimate,
     label: buildRoughLabel(input),
     basis: 'fallback',
+    assumptions: [
+      'No specific match found; used a general meal range.',
+      'Assumed 1 serving (standard portion).',
+    ],
+    notes: ['Inferred portion: 1 serving.', 'Add more detail for accuracy.'],
   }
 }
 
@@ -861,6 +877,33 @@ function CaloriesHome() {
                       This is a quick best guess based on your description.
                     </p>
                   ) : null}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-medium text-foreground">
+                      Details
+                    </summary>
+                    <div className="mt-2 space-y-3 text-sm text-muted-foreground">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                          Assumptions
+                        </p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {roughEstimate.assumptions.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                          Notes
+                        </p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {roughEstimate.notes.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               ) : null}
             </div>
