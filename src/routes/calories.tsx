@@ -112,7 +112,17 @@ type AccurateEstimate = {
   notes: Array<string>
 }
 
+type FollowUpQuestion = {
+  id: string
+  prompt: string
+  type: 'text' | 'choice'
+  options?: Array<string>
+  placeholder?: string
+}
+
 const ROUGH_DEFAULT_SERVING_GRAMS = 100
+const ACCURATE_FOLLOWUP_LIMIT = 3
+const ACCURATE_SKIPPED_ANSWER = '__skipped__'
 
 const ROUGH_ESTIMATE_RULES: Array<{
   label: string
@@ -398,6 +408,101 @@ function parseAccurateLine(line: string): {
   return { name: safeName, grams, caloriesPer100g, notes, source }
 }
 
+function parseAccurateLineForFollowUp(line: string): {
+  name: string
+  quantityMissing: boolean
+  unitUnknown: boolean
+} | null {
+  const trimmed = line.trim()
+  if (!trimmed) return null
+
+  const attachedMatch = trimmed.match(/^(\d+(?:\.\d+)?)([a-zA-Z]+)\s+(.*)$/)
+  let quantityRaw = ''
+  let unitRaw: string | undefined
+  let name = ''
+  if (attachedMatch) {
+    quantityRaw = attachedMatch[1]
+    unitRaw = attachedMatch[2]
+    name = attachedMatch[3]
+  } else {
+    const splitMatch = trimmed.match(/^([\d\s./]+)?\s*([a-zA-Z]+)?\s*(.*)$/)
+    if (!splitMatch) return null
+    quantityRaw = splitMatch[1]
+    unitRaw = splitMatch[2]
+    name = splitMatch[3]
+  }
+
+  const quantity = parseQuantity(quantityRaw)
+  const normalizedUnit = normalizeUnit(unitRaw)
+  const safeName = name.trim() || 'this ingredient'
+  return {
+    name: safeName,
+    quantityMissing: quantity == null,
+    unitUnknown: quantity != null && normalizedUnit == null,
+  }
+}
+
+function getAccurateFollowUpQuestions(input: string): Array<FollowUpQuestion> {
+  const lines = input
+    .split(/[\n,]+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const questions: Array<FollowUpQuestion> = []
+
+  if (lines.length > 1) {
+    questions.push({
+      id: 'servings',
+      prompt: 'How many servings does this make?',
+      type: 'text',
+      placeholder: 'e.g. 2',
+    })
+  }
+
+  for (const [index, line] of lines.entries()) {
+    if (questions.length >= ACCURATE_FOLLOWUP_LIMIT) break
+    const parsed = parseAccurateLineForFollowUp(line)
+    if (!parsed) continue
+    if (parsed.quantityMissing) {
+      questions.push({
+        id: `amount-${index}`,
+        prompt: `About how much ${parsed.name} did you use?`,
+        type: 'text',
+        placeholder: 'e.g. 120g',
+      })
+      continue
+    }
+    if (parsed.unitUnknown) {
+      questions.push({
+        id: `unit-${index}`,
+        prompt: `What unit should we use for ${parsed.name}?`,
+        type: 'text',
+        placeholder: 'e.g. g, tbsp',
+      })
+    }
+  }
+
+  const normalized = input.toLowerCase()
+  if (questions.length < ACCURATE_FOLLOWUP_LIMIT && normalized.includes('rice')) {
+    questions.push({
+      id: 'rice-state',
+      prompt: 'Is the rice cooked or uncooked?',
+      type: 'choice',
+      options: ['Cooked', 'Uncooked', 'Not sure'],
+    })
+  }
+
+  if (questions.length < ACCURATE_FOLLOWUP_LIMIT) {
+    questions.push({
+      id: 'extras',
+      prompt: 'Any extras or toppings to include?',
+      type: 'text',
+      placeholder: 'e.g. sauce, oil, cheese',
+    })
+  }
+
+  return questions.slice(0, ACCURATE_FOLLOWUP_LIMIT)
+}
+
 function getAccurateEstimate(input: string): AccurateEstimate {
   const lines = input
     .split(/[\n,]+/)
@@ -657,6 +762,15 @@ function CaloriesHome() {
   const [accurateEstimate, setAccurateEstimate] = useState<AccurateEstimate | null>(
     null,
   )
+  const [accurateQuestions, setAccurateQuestions] = useState<Array<FollowUpQuestion>>(
+    [],
+  )
+  const [accurateAnswers, setAccurateAnswers] = useState<
+    Record<string, string | undefined>
+  >({})
+  const [accurateStep, setAccurateStep] = useState<'questions' | 'result' | null>(
+    null,
+  )
   const normalizedSearch = recipeSearch.trim().toLowerCase()
   const visibleRecipes =
     recipes?.filter((recipe) => {
@@ -709,7 +823,54 @@ function CaloriesHome() {
       return
     }
     setRoughEstimate(null)
-    setAccurateEstimate(getAccurateEstimate(addNewText))
+    const questions = getAccurateFollowUpQuestions(addNewText)
+    setAccurateQuestions(questions)
+    setAccurateAnswers({})
+    if (questions.length === 0) {
+      setAccurateEstimate(getAccurateEstimate(addNewText))
+      setAccurateStep('result')
+    } else {
+      setAccurateEstimate(null)
+      setAccurateStep('questions')
+    }
+  }
+  const handleAccurateAnswerChange = (id: string, value: string) => {
+    setAccurateAnswers((prev) => ({ ...prev, [id]: value }))
+  }
+  const handleAccurateSkipQuestion = (id: string) => {
+    setAccurateAnswers((prev) => ({ ...prev, [id]: ACCURATE_SKIPPED_ANSWER }))
+  }
+  const handleAccurateSkipAll = () => {
+    const skippedAnswers: Record<string, string> = {}
+    accurateQuestions.forEach((question) => {
+      skippedAnswers[question.id] = ACCURATE_SKIPPED_ANSWER
+    })
+    setAccurateAnswers((prev) => ({ ...prev, ...skippedAnswers }))
+    const estimate = getAccurateEstimate(addNewText)
+    const followUpNotes = accurateQuestions.map((question) => {
+      const answer = skippedAnswers[question.id]
+      return `Follow-up: ${question.prompt} ${answer === ACCURATE_SKIPPED_ANSWER ? 'Skipped; used best guess.' : answer}`
+    })
+    setAccurateEstimate({
+      ...estimate,
+      notes: [...estimate.notes, ...followUpNotes],
+    })
+    setAccurateStep('result')
+  }
+  const handleAccurateFinalize = () => {
+    const estimate = getAccurateEstimate(addNewText)
+    const followUpNotes = accurateQuestions.map((question) => {
+      const answer = accurateAnswers[question.id]
+      if (!answer || answer === ACCURATE_SKIPPED_ANSWER) {
+        return `Follow-up: ${question.prompt} Skipped; used best guess.`
+      }
+      return `Follow-up: ${question.prompt} ${answer}`
+    })
+    setAccurateEstimate({
+      ...estimate,
+      notes: [...estimate.notes, ...followUpNotes],
+    })
+    setAccurateStep('result')
   }
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open)
@@ -722,6 +883,9 @@ function CaloriesHome() {
       setRoughEstimate(null)
       setRoughGramsInput('')
       setAccurateEstimate(null)
+      setAccurateQuestions([])
+      setAccurateAnswers({})
+      setAccurateStep(null)
     }
   }
 
@@ -740,8 +904,11 @@ function CaloriesHome() {
   }, [addNewText])
 
   useEffect(() => {
-    if (!accurateEstimate) return
+    if (!accurateEstimate && accurateQuestions.length === 0 && !accurateStep) return
     setAccurateEstimate(null)
+    setAccurateQuestions([])
+    setAccurateAnswers({})
+    setAccurateStep(null)
   }, [addNewText])
 
   useEffect(() => {
@@ -1119,6 +1286,105 @@ function CaloriesHome() {
                   Accurate (add ingredients)
                 </Button>
               </div>
+              {accurateStep === 'questions' && accurateQuestions.length > 0 ? (
+                <div className="rounded-2xl border border-border bg-card/70 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                        Follow-up questions
+                      </p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Optional for accuracy. Skip any you don&apos;t want to answer.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto px-0 text-xs text-muted-foreground"
+                      onClick={handleAccurateSkipAll}
+                    >
+                      Use best guess
+                    </Button>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {accurateQuestions.map((question) => {
+                      const answer = accurateAnswers[question.id]
+                      const isSkipped = answer === ACCURATE_SKIPPED_ANSWER
+                      return (
+                        <div
+                          key={question.id}
+                          className="rounded-xl border border-border/70 bg-background/70 p-3"
+                        >
+                          <p className="text-sm font-medium text-foreground">
+                            {question.prompt}
+                          </p>
+                          {question.type === 'text' ? (
+                            <input
+                              type="text"
+                              value={isSkipped ? '' : answer ?? ''}
+                              onChange={(e) =>
+                                handleAccurateAnswerChange(
+                                  question.id,
+                                  e.target.value,
+                                )
+                              }
+                              placeholder={question.placeholder}
+                              disabled={isSkipped}
+                              className="mt-2 h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none disabled:opacity-70"
+                            />
+                          ) : question.options ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {question.options.map((option) => {
+                                const isSelected = answer === option
+                                return (
+                                  <Button
+                                    key={option}
+                                    type="button"
+                                    variant={isSelected ? 'secondary' : 'ghost'}
+                                    className="h-8 px-3 text-xs"
+                                    disabled={isSkipped}
+                                    onClick={() =>
+                                      handleAccurateAnswerChange(
+                                        question.id,
+                                        option,
+                                      )
+                                    }
+                                  >
+                                    {option}
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                          ) : null}
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-auto px-0 text-xs text-muted-foreground"
+                              onClick={() => handleAccurateSkipQuestion(question.id)}
+                              disabled={isSkipped}
+                            >
+                              Skip / Use best guess
+                            </Button>
+                            {isSkipped ? (
+                              <span className="text-xs text-muted-foreground">
+                                Skipped
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <Button
+                    type="button"
+                    className="mt-4 w-full"
+                    onClick={handleAccurateFinalize}
+                  >
+                    Get estimate
+                  </Button>
+                </div>
+              ) : null}
               {roughEstimate ? (
                 <div className="rounded-2xl border border-border bg-card/70 p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">

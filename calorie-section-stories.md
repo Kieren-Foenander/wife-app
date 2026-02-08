@@ -294,7 +294,7 @@ Acceptance criteria:
 
 ---
 
-- [ ] **Story 4.2** — AI asks follow-up questions, all skippable
+- [x] **Story 4.2** — AI asks follow-up questions, all skippable
 
 As a user, I want better accuracy when I have time, but I must be able to skip.
 
