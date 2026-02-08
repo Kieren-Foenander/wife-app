@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as calorieSettings from "../calorieSettings.js";
 import type * as todos from "../todos.js";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  calorieSettings: typeof calorieSettings;
   todos: typeof todos;
 }>;
 

@@ -34,4 +34,11 @@ export default defineSchema({
   })
     .index('by_task_id', ['taskId'])
     .index('by_task_id_completed_date', ['taskId', 'completedDate']),
+  userSettings: defineTable({
+    kind: v.string(),
+    normalGoal: v.number(),
+    maintenanceGoal: v.number(),
+    resetWeekStartMs: v.optional(v.number()),
+    resetWeekEndMs: v.optional(v.number()),
+  }).index('byKind', ['kind']),
 })

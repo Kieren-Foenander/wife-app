@@ -6,40 +6,59 @@ Goal: A mobile-first productivity app for recurring responsibilities. Everything
 
 Target user: People managing repeatable household routines who want a simple, low-friction checklist.
 
+## Tech stack
+
+- TanStack Start (React 19), Convex (backend + DB), pnpm workspaces. Deploy: Cloudflare (Wrangler).
+
 ## Structure
 
-- Task: The primary item. Can have any depth of subtasks.
-- Subtask: A task with a parent task.
-- Views: Day, Week, Month.
+- **Task**: Primary item. Fields: title, optional parentTaskId, optional dueDate (UTC start-of-day ms), optional frequency (root tasks only). Can have any depth of subtasks.
+- **Subtask**: A task with a parent; cannot be recurring.
+- **Recurrence**: Root tasks only. Frequencies: daily, bi-daily, weekly, fortnightly, monthly, quarterly, 6-monthly, yearly. Completion for recurring tasks is per-day; non-recurring is “completed ever” (single record).
+- **Views**: One main view — **daily task list** for a **selected day**. Week and Month are **date pickers** (toggle in main content) to choose which day to show; they do not show tasks grouped by day.
 
-## Behavior requirements
+## Routes
 
-- Root task creation never asks for a parent.
-- Subtasks can only be created inside a parent task; parent is auto-selected and shown read-only.
-- Completing a task does not hide it; show completed state (strike-through).
-- Parent completion mirrors subtasks:
-  - If all subtasks are completed, parent auto-completes.
-  - If parent is completed, all subtasks auto-complete.
-  - If any subtask is unchecked, parent auto-unchecks.
-- Week/Month views show all days in the range, grouped by day label with tasks listed under each.
-- Week/Month day click keeps the current view and scrolls to that day.
-- Day selection updates when a day is clicked in Week/Month; returning to Day view uses that selection until Today is chosen.
-- Provide an easy reset to Today (floating button).
-- Theme is pastel and applied across UI, not just tokens.
-- Remove TanStack starter header and menu; no top-level navigation.
-- App title "Wife App" centered at top, small.
-- Day/Week/Month navigation should be a compact bottom bar (native mobile feel).
+- **`/`** (optional `?date=YYYY-MM-DD`): Daily view. Shows root tasks due on the selected day (or today if no date). Header: “Wife App”, selected day label, “Tasks”. Week/Month toggle with Prev/Next to change range; Week strip or Month grid to pick a day (updates URL and list). “Add task” opens root-creation drawer. Task list: sortable (drag), checkbox, title (link to task detail), subtask badge (x/y), edit, delete. “Jump to Today” floating button when not today. Bottom nav: Tasks (current), Gym (soon), calories (soon) — disabled placeholders.
+- **`/tasks/$taskId`** (optional `?date=YYYY-MM-DD`): Task detail. Breadcrumb: Daily → ancestors → current task. Parent task: checkbox (complete/uncomplete this task and all subtasks), title, completion indicator (progress bar + x/y done). “Add sub-task” opens drawer with parent fixed. Sub-task list: same row UI, sortable. “Go Back” to daily view (preserves date).
 
-## Work list
+## Behavior
 
-- [x] Root task drawer: remove parent field; assume root.
-- [x] Subtask drawer: only show within task detail; auto-set parent.
-- [x] Completion UI: keep completed tasks visible with strike-through.
-- [x] Completion sync: parent<->subtasks auto-propagation.
-- [x] Week/Month day click: scroll within view, do not switch view.
-- [x] Selected day state: clicking a day sets day state for Day view; reset on Today.
-- [x] Today reset: floating button to jump back to today.
-- [x] Pastel theme: apply palette to components, not just tokens.
-- [x] Remove starter header/menu: keep app single-page.
-- [x] Add centered small title: "Wife App".
-- [x] Redesign view tabs: bottom navigation bar, mobile-style.
+- **Root task creation**: Drawer has no parent field. Optional due date, optional repeat (frequency). Assumes root.
+- **Subtask creation**: Only from task detail; drawer shows parent (read-only), no frequency.
+- **Completion**: Completed tasks stay visible with strike-through (line-through + muted). No hiding.
+- **Parent ↔ subtask sync**: All subtasks completed → parent auto-completes. Parent completed → all subtasks marked complete. Any subtask unchecked → parent (and ancestors) uncheck. Recurring context: completion is per-day; non-recurring uses single completion.
+- **Day selection**: URL drives selected day. Clicking a day in Week strip or Month grid navigates with `?date=YYYY-MM-DD`. “Jump to Today” clears date. No separate “scroll to day” — one day, one list.
+- **Ordering**: Custom order via drag-and-drop; persisted in Convex (taskOrders by viewKey). Root order per day; children order per parent (and recurring roots share a recurring view key).
+- **Theme**: Pastel palette (Nunito font, pastel CSS vars) applied across UI. No starter header/menu; app title “Wife App” centered at top, small. Bottom bar is compact, mobile-style.
+- **Completion feedback**: Brief celebration (bounce) when marking a task complete.
+
+## Data (Convex)
+
+- **tasks**: title, parentTaskId?, dueDate?, frequency? (root only).
+- **taskOrders**: viewKey, taskId, parentTaskId?, order — for drag-order.
+- **completedTasks**: taskId, completedDate? — one row per completion; recurring uses completedDate (UTC day start), non-recurring may omit it for “done ever”.
+
+Indexes used: byParentTaskId, byViewKeyOrder, byViewKeyTaskId, by_task_id, by_task_id_completed_date.
+
+## Work list (current state)
+
+- [x] Root task drawer: no parent; optional due + frequency.
+- [x] Subtask drawer: only from task detail; parent fixed, no frequency.
+- [x] Completion: completed tasks visible with strike-through.
+- [x] Parent/subtask sync: auto complete/uncomplete propagation.
+- [x] Day selection: Week/Month as date pickers; URL ?date=; Jump to Today.
+- [x] Pastel theme and “Wife App” title; no starter nav.
+- [x] Bottom nav: Tasks + placeholders (Gym, calories — soon).
+- [x] Task detail: breadcrumb, parent checkbox, completion indicator, sub-tasks, reorder.
+- [x] Recurring tasks: frequencies; per-day completion for recurring.
+- [x] Drag-and-drop reorder with persisted order.
+
+## Planned (from UI)
+
+- Gym (section) — placeholder in bottom nav.
+- **Calories (section)** — placeholder in bottom nav. Full spec: [Calories section PRD](calories-section-prd.md).
+
+## Related PRDs
+
+- [Calories section PRD](calories-section-prd.md) — Easy calorie tracking (v1): logging, AI estimates, recipes, weight, streak, reset week.
