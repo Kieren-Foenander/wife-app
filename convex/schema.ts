@@ -51,6 +51,16 @@ export default defineSchema({
   })
     .index('byDayStartMs', ['dayStartMs'])
     .index('byDayStartMsTimestamp', ['dayStartMs', 'timestampMs']),
+  recipes: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    ingredients: v.optional(v.string()),
+    defaultServingGrams: v.optional(v.number()),
+    caloriesPerServing: v.optional(v.number()),
+    usageCount: v.number(),
+  })
+    .index('byUsageCount', ['usageCount'])
+    .index('byName', ['name']),
   weightEntries: defineTable({
     dayStartMs: v.number(),
     timestampMs: v.number(),

@@ -139,7 +139,7 @@ Acceptance criteria:
 
 EPIC 2 — Add Flow (Reuse + Add New)
 
-- [ ] **Story 2.1** — Add entry opens searchable Saved Recipes list
+- [x] **Story 2.1** — Add entry opens searchable Saved Recipes list
 
 **Codebase:** Use shared `Drawer` (`src/components/ui/drawer.tsx`), same bottom-sheet pattern as task `CreationDrawer`. Route: `/calories` (or `/calories?date=YYYY-MM-DD` when adding to a selected day).
 

@@ -1,10 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { useQuery } from 'convex/react'
 import { Utensils } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { BottomNav } from '../components/BottomNav'
 import { Button } from '../components/ui/button'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '../components/ui/drawer'
 import { ListRowSkeleton, Skeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import {
@@ -256,6 +265,17 @@ function CaloriesHome() {
     dayStartMs,
     order: 'desc',
   })
+  const recipes = useQuery(api.recipes.listRecipes)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [recipeSearch, setRecipeSearch] = useState('')
+  const normalizedSearch = recipeSearch.trim().toLowerCase()
+  const visibleRecipes =
+    recipes?.filter((recipe) => {
+      if (!normalizedSearch) return true
+      const name = recipe.name.toLowerCase()
+      const description = recipe.description?.toLowerCase() ?? ''
+      return name.includes(normalizedSearch) || description.includes(normalizedSearch)
+    }) ?? []
   const weightEntries = useQuery(api.weightEntries.listWeightEntriesForRange, {
     startDayMs: weightRangeStart,
     endDayMs: weightRangeEnd,
@@ -264,7 +284,10 @@ function CaloriesHome() {
     dayStartMs === startOfDayUTCFromDate(new Date())
   const entriesTitle = isSelectedToday ? "Today's entries" : 'Entries'
   const handleAddClick = () => {
-    toast('Add flow coming soon.')
+    setDrawerOpen(true)
+  }
+  const handleAddNew = () => {
+    toast('Add new flow coming soon.')
   }
 
   return (
@@ -455,6 +478,110 @@ function CaloriesHome() {
           </div>
         </section>
       </main>
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="bottom">
+        <DrawerContent
+          className="border-border bg-card"
+          role="dialog"
+          aria-label="Add entry"
+        >
+          <DrawerHeader>
+            <DrawerTitle className="text-foreground">Add entry</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex flex-col gap-4 px-4 pb-4">
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <label
+                htmlFor="recipe-search"
+                className="mb-2 block text-sm font-medium text-muted-foreground"
+              >
+                Search saved recipes
+              </label>
+              <input
+                id="recipe-search"
+                type="text"
+                value={recipeSearch}
+                onChange={(e) => setRecipeSearch(e.target.value)}
+                placeholder="Search by recipe name"
+                className="h-10 w-full rounded-md border border-input bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                aria-label="Search saved recipes"
+              />
+            </div>
+            <div className="rounded-2xl border border-border bg-card/70 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Saved recipes
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Most used first
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {normalizedSearch ? `${visibleRecipes.length} matches` : ''}
+                </span>
+              </div>
+              <div className="mt-3">
+                {recipes === undefined ? (
+                  <ul className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <ListRowSkeleton key={i} />
+                    ))}
+                  </ul>
+                ) : visibleRecipes.length === 0 ? (
+                  <div
+                    className="flex flex-col items-center justify-center gap-2 py-8 text-center"
+                    role="status"
+                    aria-label="No saved recipes"
+                  >
+                    <p className="text-sm font-medium text-foreground">
+                      {normalizedSearch
+                        ? 'No recipes match your search'
+                        : 'No saved recipes yet'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {normalizedSearch
+                        ? 'Try a different name.'
+                        : 'Tap Add new to save a recipe.'}
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {visibleRecipes.map((recipe) => (
+                      <li
+                        key={recipe._id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-4 py-3"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {recipe.name}
+                          </p>
+                          {recipe.description ? (
+                            <p className="text-xs text-muted-foreground">
+                              {recipe.description}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {recipe.usageCount} uses
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="flex-row justify-between border-t border-border pt-4">
+            <DrawerClose asChild>
+              <Button variant="secondary" aria-label="Close drawer">
+                Close
+              </Button>
+            </DrawerClose>
+            <Button type="button" onClick={handleAddNew}>
+              Add new
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
       <BottomNav active="calories" />
     </div>
   )
