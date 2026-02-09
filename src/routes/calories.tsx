@@ -76,7 +76,7 @@ function CaloriesHome() {
           selectedDate={selectedDate}
           isSelectedToday={isSelectedToday}
         />
-        <CaloriesSummaryCard totals={totals} />
+        <CaloriesSummaryCard totals={totals} dayStartMs={dayStartMs} />
         <WeightTrendSection
           weightEntries={weightEntries}
           startDayMs={weightRangeStart}
