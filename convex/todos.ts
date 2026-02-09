@@ -17,6 +17,18 @@ type Frequency =
   | 'yearly'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
+const APP_TIME_ZONE = 'Australia/Brisbane'
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  hourCycle: 'h23',
+})
 const ROOT_DAY_PREFIX = 'root-day:'
 const ROOT_RECURRING_VIEW_KEY = 'root-recurring'
 const CHILDREN_PREFIX = 'children:'
