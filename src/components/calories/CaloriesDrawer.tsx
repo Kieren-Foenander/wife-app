@@ -267,6 +267,13 @@ export function CaloriesDrawer({
     setDrawerMode('list')
   }
 
+  const handleRecipeRecalculate = () => {
+    if (!selectedRecipe) return
+    setAddNewText(selectedRecipe.name + '\n\n' + selectedRecipe.description + '\n\n' + selectedRecipe.ingredients)
+    setSelectedRecipeId(null)
+    setDrawerMode('addNew')
+  }
+
   const buildEditInput = () => {
     if (!editEntry) return ''
     const parts = [editEntry.label.trim(), editDetails.trim()].filter(Boolean)
@@ -604,6 +611,8 @@ export function CaloriesDrawer({
               gramsInput={gramsInput}
               onGramsChange={setGramsInput}
               computedCalories={computedCalories}
+              isBusy={isDrawerBusy}
+              onRecalculate={handleRecipeRecalculate}
             />
           ) : isAddNew ? (
             <AddNewPanel

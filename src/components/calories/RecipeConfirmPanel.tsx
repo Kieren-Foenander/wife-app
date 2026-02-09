@@ -1,3 +1,4 @@
+import { Button } from '../ui/button'
 import { formatCalories, type Recipe } from '@/lib/caloriesUtils'
 
 type RecipeConfirmPanelProps = {
@@ -5,6 +6,8 @@ type RecipeConfirmPanelProps = {
   gramsInput: string
   onGramsChange: (value: string) => void
   computedCalories: number
+  isBusy: boolean
+  onRecalculate: () => void
 }
 
 export function RecipeConfirmPanel({
@@ -12,6 +15,8 @@ export function RecipeConfirmPanel({
   gramsInput,
   onGramsChange,
   computedCalories,
+  isBusy,
+  onRecalculate,
 }: RecipeConfirmPanelProps) {
   return (
     <div className="flex flex-col gap-4 px-4 pb-4">
@@ -65,6 +70,20 @@ export function RecipeConfirmPanel({
             ) : null}
           </div>
         </details>
+      </div>
+      <div className="rounded-2xl border border-border bg-card/70 p-4">
+        <p className="text-sm font-medium text-foreground">Need a new estimate?</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Use AI if this meal changed from last time.
+        </p>
+        <Button
+          type="button"
+          className="mt-3 w-full"
+          onClick={onRecalculate}
+          disabled={isBusy}
+        >
+          Recalculate with AI
+        </Button>
       </div>
     </div>
   )
