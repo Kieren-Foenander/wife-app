@@ -4,12 +4,8 @@ import { useMutation, useQuery } from 'convex/react'
 import { ClipboardList, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  CreationDrawer,
-  type EditTaskData,
-  type TaskFrequency,
-  type UpdateTaskParams,
-} from '../components/CreationDrawer'
+import { BottomNav } from '../components/BottomNav'
+import { CreationDrawer } from '../components/CreationDrawer'
 import { MonthGrid } from '../components/MonthGrid'
 import { SortableTaskList } from '../components/SortableTaskList'
 import { TaskRow } from '../components/TaskRow'
@@ -27,9 +23,10 @@ import { Button } from '../components/ui/button'
 import { ListRowSkeleton } from '../components/ui/skeleton'
 import { Spinner } from '../components/ui/spinner'
 import { api } from '../../convex/_generated/api'
-import type { Id } from '../../convex/_generated/dataModel'
 import { buildRootDayViewKey } from '../lib/taskOrder'
 import { useReorderTasks } from '../lib/useReorderTasks'
+import type { EditTaskData, TaskFrequency, UpdateTaskParams } from '../components/CreationDrawer'
+import type { Id } from '../../convex/_generated/dataModel'
 
 export const Route = createFileRoute('/')({
   ssr: false,
@@ -413,32 +410,7 @@ function DailyView() {
           Jump to Today
         </Button>
       ) : null}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/90 backdrop-blur">
-        <div
-          className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2 px-6 py-3"
-          role="navigation"
-          aria-label="Primary"
-        >
-          <a
-            href="/"
-            className="flex-1 rounded-full bg-primary/20 px-3 py-2 text-center text-sm font-semibold uppercase tracking-wide text-foreground shadow-sm"
-            aria-current="page"
-          >
-            Tasks
-          </a>
-          {['Gym (soon)', 'calories (soon)'].map((label) => (
-            <button
-              key={label}
-              type="button"
-              className="flex-1 cursor-not-allowed rounded-full px-3 py-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
-              aria-disabled="true"
-              tabIndex={-1}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
+      <BottomNav active="tasks" />
     </div>
   )
 }

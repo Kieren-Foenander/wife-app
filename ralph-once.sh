@@ -8,18 +8,23 @@ cd "$(dirname "$0")"
 # Pipe last 10 commit messages into a file the agent reads (replaces progress.txt)
 git log -10 --format="%h %s%n%b" > .ralph-recent-commits.txt
 
-PROMPT='@PRD.md @.ralph-recent-commits.txt @AGENTS.md @docs/RALPH.md \
-1. Read the PRD and the recent commit history (.ralph-recent-commits.txt). \
-2. Find the next incomplete task and implement it. \
-3. Before committing, run ALL feedback loops (do NOT commit if any fail): \
+PROMPT='@calories-section-prd.md @calorie-section-stories.md 
+1.Read the calories prd and the stories that are available to complete. \
+pickup the next story in the list to complete. \
+based on what you understand about the prd and the ticket you are completing understand the codebase \
+for what is required to be implemented and create a plan with tasks to complete the story. \
+Then once you thoroughly understand what you are implementing and the implications of it complete the story to its acceptance criteria. \
+Remember the acceptence criteria is a guide for what needs to be completed but does not necesarrily dictate everything \
+that must be done and things may be missed so if the work requires additional work, \
+first check it is not covered in another story and if not complete it within the same story. \
+2. Before committing, run ALL feedback loops (do NOT commit if any fail): \
    - TypeScript: pnpm run typecheck (must pass with no errors) \
    - Convex: pnpm run convex:check (validates Convex backend; must pass) \
    - Tests: pnpm run test (must pass) \
    - Lint: pnpm run lint (must pass) \
    Fix any failures before committing. \
-4. If the task involves UI: run Playwright e2e to verify (pnpm run e2e). Fix any failures. Optionally use Playwright MCP or Cursor browser MCP if available for manual checks. \
-5. Before committing: tick off the completed PRD item in PRD.md (mark the checkbox [x]). \
-6. Commit your changes. Write what you did (progress summary) IN THE COMMIT MESSAGE body—do not use a progress file. \
-ONLY DO ONE TASK AT A TIME.'
+4. Before committing: tick off the completed PRD item in @calorie-section-stories.md  (mark the checkbox [x]). \
+5. Commit your changes. Write what you did (progress summary) IN THE COMMIT MESSAGE body—do not use a progress file. \
+ONLY WORK ON A SINGLE TASK. \'
 
 agent -p --force --output-format text "$PROMPT"

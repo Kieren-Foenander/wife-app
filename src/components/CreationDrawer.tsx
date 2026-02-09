@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button } from './ui/button'
 import { fromYYYYMMDD, toYYYYMMDDUTC } from '../lib/dateUtils'
+import { Button } from './ui/button'
 import {
   Drawer,
   DrawerClose,
@@ -104,7 +104,7 @@ export function CreationDrawer({
 
   useEffect(() => {
     if (!open) return
-    if (isEditing && taskToEdit) {
+    if (taskToEdit) {
       setTaskTitle(taskToEdit.title)
       setTaskDueDate(
         taskToEdit.dueDate != null
@@ -126,13 +126,13 @@ export function CreationDrawer({
     )
     setRepeatEnabled(false)
     setTaskFrequency('daily')
-  }, [open, isEditing, taskToEdit, defaultDueDate, allowRepeat])
+  }, [open, taskToEdit, defaultDueDate, allowRepeat])
 
   const handleTaskSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const trimmed = taskTitle.trim()
     if (!trimmed) return
-    if (isEditing && taskToEdit) {
+    if (taskToEdit) {
       if (!onUpdateTask) return
       await onUpdateTask({
         id: taskToEdit.id,

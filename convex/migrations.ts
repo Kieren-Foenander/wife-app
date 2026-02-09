@@ -1,74 +1,9 @@
 import { v } from 'convex/values'
 import { mutation } from './_generated/server'
+import { convertUtcDayStartToBrisbane } from './dateUtils'
 
-const APP_TIME_ZONE = 'Australia/Brisbane'
 const ROOT_DAY_PREFIX = 'root-day:'
 const CHILDREN_PREFIX = 'children:'
-
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  timeZone: APP_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-  hourCycle: 'h23',
-})
-
-function getDateTimeParts(ms: number): {
-  year: number
-  month: number
-  day: number
-  hour: number
-  minute: number
-  second: number
-} {
-  const parts = DATE_TIME_FORMATTER.formatToParts(new Date(ms))
-  const values: Record<string, string> = {}
-  for (const part of parts) {
-    if (part.type !== 'literal') {
-      values[part.type] = part.value
-    }
-  }
-  return {
-    year: Number(values.year),
-    month: Number(values.month),
-    day: Number(values.day),
-    hour: Number(values.hour),
-    minute: Number(values.minute),
-    second: Number(values.second),
-  }
-}
-
-function getTimeZoneOffsetMs(ms: number): number {
-  const parts = getDateTimeParts(ms)
-  const asUTC = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second,
-  )
-  return asUTC - ms
-}
-
-function startOfDayFromParts(year: number, month: number, day: number): number {
-  const utcMidnight = Date.UTC(year, month - 1, day)
-  const offsetMs = getTimeZoneOffsetMs(utcMidnight)
-  return utcMidnight - offsetMs
-}
-
-function convertUtcDayStartToBrisbane(ms: number): number {
-  const d = new Date(ms)
-  return startOfDayFromParts(
-    d.getUTCFullYear(),
-    d.getUTCMonth() + 1,
-    d.getUTCDate(),
-  )
-}
 
 function migrateViewKey(viewKey: string): string | null {
   if (viewKey.startsWith(ROOT_DAY_PREFIX)) {

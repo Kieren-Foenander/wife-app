@@ -22,7 +22,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-input {
+input, textarea {
   @apply !text-base
 }
 

@@ -29,7 +29,7 @@ type DragRenderProps = {
 }
 
 type SortableTaskListProps<T extends { _id: Id<'tasks'> }> = {
-  tasks: T[]
+  tasks: Array<T>
   onReorder: (orderedIds: Array<Id<'tasks'>>) => void
   renderTask: (task: T, dragProps: DragRenderProps) => React.ReactNode
   isDragDisabled?: (task: T) => boolean
@@ -86,7 +86,7 @@ export function SortableTaskList<T extends { _id: Id<'tasks'> }>({
   const orderedTasks = useMemo(() => {
     const byId = new Map(tasks.map((task) => [task._id, task]))
     const seen = new Set<Id<'tasks'>>()
-    const ordered: T[] = []
+    const ordered: Array<T> = []
     for (const id of orderedIds) {
       const task = byId.get(id)
       if (task) {

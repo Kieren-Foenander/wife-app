@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { frequencyValidator } from './schema'
+import { addMonthsUTC, startOfDayUTC } from './dateUtils'
 import type { Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
@@ -16,18 +17,6 @@ type Frequency =
   | 'yearly'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
-const APP_TIME_ZONE = 'Australia/Brisbane'
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  timeZone: APP_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-  hourCycle: 'h23',
-})
 const ROOT_DAY_PREFIX = 'root-day:'
 const ROOT_RECURRING_VIEW_KEY = 'root-recurring'
 const CHILDREN_PREFIX = 'children:'
@@ -52,8 +41,8 @@ function buildChildrenRecurringViewKey(parentTaskId: string): string {
 async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
   ctx: QueryCtx,
   viewKey: string | undefined,
-  tasks: T[],
-): Promise<T[]> {
+  tasks: Array<T>,
+): Promise<Array<T>> {
   if (!viewKey || tasks.length === 0) return tasks
   const orderRows = await ctx.db
     .query('taskOrders')
@@ -82,7 +71,8 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
     if (parentId) {
       const parent = await ctx.db.get(parentId as Id<'tasks'>)
       const hasRecurringParent =
-        isRecurringTask(parent) || (await hasRecurringAncestor(ctx, parentId as Id<'tasks'>))
+        isRecurringTask(parent) ||
+        (await hasRecurringAncestor(ctx, parentId as Id<'tasks'>))
       if (hasRecurringParent) {
         const recurringRows = await ctx.db
           .query('taskOrders')
@@ -110,7 +100,11 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
       if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
       if (aRecurring != null) return -1
       if (bRecurring != null) return 1
-    } else if (recurringOrderById.size > 0 && isRecurringTask(a) && isRecurringTask(b)) {
+    } else if (
+      recurringOrderById.size > 0 &&
+      isRecurringTask(a) &&
+      isRecurringTask(b)
+    ) {
       if (aRecurring != null && bRecurring != null) return aRecurring - bRecurring
       if (aRecurring != null) return -1
       if (bRecurring != null) return 1
@@ -122,56 +116,6 @@ async function applyViewOrder<T extends { _id: Id<'tasks'> }>(
     if (bOrder != null) return 1
     return (originalIndex.get(a._id) ?? 0) - (originalIndex.get(b._id) ?? 0)
   })
-}
-
-function getDateTimeParts(ms: number): {
-  year: number
-  month: number
-  day: number
-  hour: number
-  minute: number
-  second: number
-} {
-  const parts = DATE_TIME_FORMATTER.formatToParts(new Date(ms))
-  const values: Record<string, string> = {}
-  for (const part of parts) {
-    if (part.type !== 'literal') {
-      values[part.type] = part.value
-    }
-  }
-  return {
-    year: Number(values.year),
-    month: Number(values.month),
-    day: Number(values.day),
-    hour: Number(values.hour),
-    minute: Number(values.minute),
-    second: Number(values.second),
-  }
-}
-
-function getTimeZoneOffsetMs(ms: number): number {
-  const parts = getDateTimeParts(ms)
-  const asUTC = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second,
-  )
-  return asUTC - ms
-}
-
-function startOfDayFromParts(year: number, month: number, day: number): number {
-  const utcMidnight = Date.UTC(year, month - 1, day)
-  const offsetMs = getTimeZoneOffsetMs(utcMidnight)
-  return utcMidnight - offsetMs
-}
-
-/** Start of day in Australia/Brisbane (00:00:00.000 local). */
-function startOfDayUTC(ms: number): number {
-  const { year, month, day } = getDateTimeParts(ms)
-  return startOfDayFromParts(year, month, day)
 }
 
 const DAY_INTERVALS: Record<
@@ -193,21 +137,6 @@ const MONTH_INTERVALS: Record<
   '6-monthly': 6,
   yearly: 12,
 }
-
-/** Add months to a date (Brisbane), clamping day if needed). */
-function addMonthsUTC(ms: number, months: number): number {
-  const { year, month, day } = getDateTimeParts(ms)
-  const normalized = new Date(Date.UTC(year, month - 1 + months, 1))
-  const lastDay = new Date(
-    Date.UTC(normalized.getUTCFullYear(), normalized.getUTCMonth() + 1, 0),
-  ).getUTCDate()
-  return startOfDayFromParts(
-    normalized.getUTCFullYear(),
-    normalized.getUTCMonth() + 1,
-    Math.min(day, lastDay),
-  )
-}
-
 type TaskForDue = {
   dueDate?: number
   frequency?: Frequency
