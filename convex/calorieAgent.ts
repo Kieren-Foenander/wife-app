@@ -119,16 +119,33 @@ function formatPrompt({
 }
 
 async function getEstimateResult(result: {
-  toolResults:
+  toolResults?:
     | Array<{ output: unknown }>
     | Promise<Array<{ output: unknown }>>
+  steps?: Array<{ toolResults?: Array<{ output: unknown }> }>
+  response?: { messages?: Array<unknown> }
+  finishReason?: string
 }) {
-  const toolResults = await result.toolResults
-  const toolResult = toolResults[0]?.output
-  if (!toolResult) {
-    throw new Error('No tool result returned from calorie agent')
+  const toolResults = await Promise.resolve(result.toolResults ?? [])
+  const directResult = toolResults[0]?.output
+  if (directResult) {
+    return directResult
   }
-  return toolResult
+
+  const steps = result.steps ?? []
+  for (let i = steps.length - 1; i >= 0; i -= 1) {
+    const stepResult = steps[i]?.toolResults?.[0]?.output
+    if (stepResult) {
+      return stepResult
+    }
+  }
+
+  console.warn('CaloriesAgent: missing tool result', {
+    finishReason: result.finishReason,
+    steps: steps.length,
+    toolResults: toolResults.length,
+  })
+  throw new Error('No tool result returned from calorie agent')
 }
 
 export const startEstimate = action({
